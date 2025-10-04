@@ -1,0 +1,47 @@
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.game-setup {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.error {
+  color: red;
+  margin: 10px 0;
+}
+
+.create-game,
+.join-game {
+  margin: 20px 0;
+}
+
+input {
+  margin: 5px;
+  padding: 8px;
+}
+
+button {
+  padding: 8px 16px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+.game-room {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.players ul {
+  list-style: none;
+  padding: 0;
+}
+
+.players li {
+  padding: 5px;
+  margin: 5px 0;
+  background: #f0f0f0;
+  border-radius: 4px;
+}
