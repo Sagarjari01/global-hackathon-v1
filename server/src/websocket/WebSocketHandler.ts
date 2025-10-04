@@ -14,7 +14,7 @@ export class WebSocketHandler {
 
   private setupEventHandlers(): void {
     this.io.on("connection", (socket: Socket) => {
-      console.log("User connected");
+      console.log("-------------connection event-------------");
       socket.on("hey", () => {
         console.log("Received hey event");
       });
@@ -26,6 +26,7 @@ export class WebSocketHandler {
 
       socket.on('createSinglePlayerGame', (playerName: string) => {
         try {
+          console.log("-------------createSinglePlayerGame event----------------");
           const game = this.gameService.createGameWithAI(5, playerName,socket.id);
           socket.join(game.id);
           socket.emit('gameCreated', game);
@@ -41,6 +42,7 @@ export class WebSocketHandler {
       
       socket.on('playCard', (gameId: string, card: Card) => {
         try {
+          console.log("-------------playCard event----------------");
           this.gameService.playCard(gameId, socket.id, card);
           // AI players take their turns
           this.gameService.playAITurns(gameId);
@@ -54,7 +56,7 @@ export class WebSocketHandler {
 
       socket.on("joinGame", (gameId: string, playerName: string) => {
         try {
-          // Add player using GameService
+          console.log("-------------joinGame event----------------");
           const newPlayer = this.gameService.addPlayer(gameId, playerName, socket.id);
       
           // Join socket room
@@ -87,6 +89,7 @@ export class WebSocketHandler {
 
       socket.on('placeBid', (gameId: string, bid: number) => {
         try {
+          console.log("-------------Place Bid event----------------");
           this.gameService.placeBid(gameId, socket.id, bid);
           // AI players take their turns after human bid
           this.gameService.playAITurns(gameId);

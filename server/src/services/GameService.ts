@@ -15,7 +15,7 @@ export class GameService {
 
 
   createGameWithAI(totalRounds: number, playerName: string, socketId: string): Game {
-    console.log("createGameWithAI")
+    console.log("-----------------createGameWithAI()-----------------")
     const game = this.createGame(totalRounds);
     
     // Add human player
@@ -47,7 +47,7 @@ export class GameService {
   }
 
   startGame(gameId: string): void {
-    console.log("startGame")
+    console.log("-----------------startGame()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
     
@@ -57,6 +57,7 @@ export class GameService {
   }
 
   playAITurns(gameId: string) {
+    console.log("-----------------playAITurns()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
 
@@ -105,6 +106,7 @@ export class GameService {
   }
 
   private evaluateTrick(gameId: string): void {
+    console.log("-----------------evaluateTrick()-----------------")
     const game = this.getGame(gameId);
     if (!game || !game.currentTrick) return;
 
@@ -132,6 +134,7 @@ export class GameService {
   }
 
   private completeRound(gameId: string): void {
+    console.log("-----------------completeRound()-----------------")
     const game = this.getGame(gameId);
     if (!game) return;
 
@@ -165,6 +168,7 @@ export class GameService {
   }
 
   private moveToNextTurn(gameId: string): void {
+    console.log("-----------------moveToNextTurn()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
 
@@ -189,6 +193,7 @@ export class GameService {
   }
 
   addPlayer(gameId: string, playerName: string, socketId: string): Player {
+    console.log("-----------------addPlayer()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
     if (game.players.length >= 4) throw new Error('Game is full');
@@ -208,6 +213,7 @@ export class GameService {
   }
 
   createGame(totalRounds: number): Game {
+    console.log("-----------------createGame()-----------------")
     const game: Game = {
       id: Math.random().toString(36).substr(2, 9),
       players: [],
@@ -220,13 +226,11 @@ export class GameService {
     };
     
     this.games.set(game.id, game);
-    console.log("11111111111111")
-
-    console.log(this.games);
     return game;
   }
 
   startRound(gameId: string): void {
+    console.log("-----------------startRound()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
 
@@ -241,6 +245,7 @@ export class GameService {
   }
 
   getGameState(gameId: string) {
+    console.log("-----------------getGameState()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
 
@@ -263,7 +268,11 @@ export class GameService {
   }
 
   placeBid(gameId: string, playerId: string, bid: number): void {
+    console.log("-----------------placeBid()-----------------")
+    console.log({gameId, playerId, bid})
     const game = this.getGame(gameId);
+    console.log("placeBid")
+    console.log(game)
     if (!game) throw new Error('Game not found');
     
     const player = game.players.find(p => p.id === playerId);
@@ -273,6 +282,7 @@ export class GameService {
   }
 
   playCard(gameId: string, playerId: string, card: any): void {
+    console.log("-----------------playCard()-----------------")
     const game = this.getGame(gameId);
     if (!game) throw new Error('Game not found');
     

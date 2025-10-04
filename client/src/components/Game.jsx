@@ -52,18 +52,21 @@ export const Game = () => {
 
   const submitBid = () => {
     if (!gameState) return;
-    socket.emit("placeBid", gameState.gameId, bidAmount);
+    console.log("-----------client placeBid-----------");
+    console.log(JSON.stringify(gameState, null, 2));
+    console.log("Submitting bid:", gameState.id, bidAmount);
+    socket.emit("placeBid", gameState.id, bidAmount);
   };
 
   const playCard = (card) => {
     if (!gameState) return;
-    socket.emit("playCard", gameState.gameId, card);
+    socket.emit("playCard", gameState.id, card);
   };
 
   const isPlayerTurn = () => {
     console.log("-------------isPlayerTurn-------------");
     console.log("socket id: ", socket.id);
-    console.log(gameState);
+    console.log(JSON.stringify(gameState, null, 2));
     return gameState?.currentTurn === socket.id;
   };
 
