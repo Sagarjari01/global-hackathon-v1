@@ -1,81 +1,115 @@
 import React, { useEffect, useState } from "react";
-import { socket } from "../utils/socket";
-
-// interface GameState {
-//   gameId: string;
-//   players: Array<{
-//     id: string;
-//     name: string;
-//     score: number;
-//     currentBid?: number;
-//     tricks?: number;
-//   }>;
-//   status: 'WAITING' | 'BIDDING' | 'PLAYING' | 'FINISHED';
-//   currentTurn: string;
-// }
+import { apiService } from "../services/api.service";
 
 export const Game = () => {
   const [playerName, setPlayerName] = useState("");
   const [gameState, setGameState] = useState(null);
   const [bidAmount, setBidAmount] = useState(0);
   const [playerCards, setPlayerCards] = useState([]);
+  const [bidError, setBidError] = useState("");
+
   useEffect(() => {
-    socket.on("gameCreated", (game) => {
-      console.log("Game created event:", game);
-      setGameState(game);
-      if (game.players[0].cards) {
-        setPlayerCards(game.players[0].cards);
+    if (gameState) {
+      const humanPlayer = gameState.players.find(p => p.id === 'player-1');
+      if (humanPlayer?.cards) {
+        setPlayerCards(humanPlayer.cards);
       }
-    });
+    }
+  }, [gameState]);
 
-    socket.on("gameStarted", (game) => {
-      console.log("Game started event:", game);
-      setGameState(game);
-    });
-
-    socket.on("gameState", (state) => {
-      console.log("Game state updated:", state);
-      setGameState(state);
-    });
-
-    return () => {
-      socket.off("gameCreated");
-      socket.off("gameStarted");
-      socket.off("gameState");
-    };
-  }, []);
-
-  const startSinglePlayerGame = () => {
+  const startSinglePlayerGame = async () => {
     if (!playerName) return;
-    socket.emit("createSinglePlayerGame", playerName);
+    try {
+      const game = await apiService.createGame(playerName);
+      setGameState(game);
+      const humanPlayer = game.players.find(p => p.id === 'player-1');
+      if (humanPlayer?.cards) {
+        setPlayerCards(humanPlayer.cards);
+      }
+    } catch (error) {
+      console.error('Failed to create game:', error);
+    }
   };
 
-  const submitBid = () => {
-    if (!gameState) return;
-    console.log("-----------client placeBid-----------");
-    console.log(JSON.stringify(gameState, null, 2));
-    console.log("Submitting bid:", gameState.id, bidAmount);
-    socket.emit("placeBid", gameState.id, bidAmount);
+  // Client-side bid validation that mirrors server-side logic
+  const isValidBid = (bid) => {
+    if (!gameState) return false;
+    
+    // Basic range check
+    if (bid < 0 || bid > gameState.currentRound) {
+      setBidError(`Bid must be between 0 and ${gameState.currentRound}`);
+      return false;
+    }
+
+    // Check for last bidder constraint
+    const biddingPlayers = gameState.players.filter(
+      p => p.id !== 'player-1' && typeof p.currentBid === 'number' && p.currentBid >= 0
+    );
+    
+    // If we're the last player to bid (all other players have bid)
+    if (biddingPlayers.length === gameState.players.length - 1) {
+      const sumOfPreviousBids = biddingPlayers.reduce(
+        (sum, p) => sum + p.currentBid, 
+        0
+      );
+      
+      if (sumOfPreviousBids + bid === gameState.currentRound) {
+        setBidError(`Last bidder cannot make total bids equal to ${gameState.currentRound}`);
+        return false;
+      }
+    }
+    
+    setBidError("");
+    return true;
   };
 
-  const playCard = (card) => {
+  const submitBid = async () => {
     if (!gameState) return;
-    socket.emit("playCard", gameState.id, card);
+    
+    // Validate bid before API call
+    if (!isValidBid(bidAmount)) {
+      return; // Don't submit if invalid
+    }
+    
+    try {
+      const updatedState = await apiService.placeBid(gameState.id, bidAmount);
+      setGameState(updatedState);
+    } catch (error) {
+      console.error('Failed to submit bid:', error);
+      setBidError(error.message || 'Failed to submit bid');
+    }
+  };
+  
+  const playCard = async (card) => {
+    if (!gameState) return;
+    try {
+      const updatedState = await apiService.playCard(gameState.id, card);
+      setGameState(updatedState);
+    } catch (error) {
+      console.error('Failed to play card:', error);
+    }
   };
 
   const isPlayerTurn = () => {
-    console.log("-------------isPlayerTurn-------------");
-    console.log("socket id: ", socket.id);
-    console.log(JSON.stringify(gameState, null, 2));
-    return gameState?.currentTurn === socket.id;
+    return gameState?.currentTurn === 'player-1';
   };
 
   const renderGameContent = () => {
-    if (gameState.status === 'BIDDING' && isPlayerTurn()) {
+    // render bidding phase
+    if (gameState.status === "BIDDING" && isPlayerTurn()) {
       return (
         <div className="bidding-phase">
+          <h3>Your Cards:</h3>
+          <div className="cards-container">
+            {playerCards.map((card, index) => (
+              <div key={index} className="card">
+                {`${card.value} of ${card.suit}`}
+              </div>
+            ))}
+          </div>
           <h3>Place your bid</h3>
-          <input 
+          {bidError && <div className="error">{bidError}</div>}
+          <input
             type="number"
             min="0"
             max={playerCards.length}
@@ -87,13 +121,14 @@ export const Game = () => {
       );
     }
 
-    if (gameState.status === 'PLAYING' && isPlayerTurn()) {
+    // render playing phase
+    if (gameState.status === "PLAYING" && isPlayerTurn()) {
       return (
         <div className="playing-phase">
           <h3>Your Cards:</h3>
           <div className="cards-container">
             {playerCards.map((card, index) => (
-              <button 
+              <button
                 key={index}
                 onClick={() => playCard(card)}
                 className="card"
@@ -126,9 +161,15 @@ export const Game = () => {
           <div>
             <h3>Players:</h3>
             {gameState.players.map((player) => (
-              <div key={player.id} className={player.id === gameState.currentTurn ? 'current-turn' : ''}>
+              <div
+                key={player.id}
+                className={
+                  player.id === gameState.currentTurn ? "current-turn" : ""
+                }
+              >
                 {player.name} - Score: {player.score}
-                {player.currentBid !== undefined && ` - Bid: ${player.currentBid}`}
+                {player.currentBid !== undefined &&
+                  ` - Bid: ${player.currentBid}`}
                 {player.tricks !== undefined && ` - Tricks: ${player.tricks}`}
               </div>
             ))}

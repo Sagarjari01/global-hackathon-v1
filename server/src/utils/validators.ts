@@ -1,13 +1,42 @@
 import { Game, Player, Card, Suit } from '../types';
+import logger from './logger';
 
 export class GameValidator {
   static canPlayCard(game: Game, player: Player, card: Card): boolean {
-    // Implement card play validation logic
+    logger.info("canPlayCard")
+    logger.info("111111111111111")
+    if (game.status !== "PLAYING") return false;
+    logger.info("2222222222222222")
+    if (game.currentTurn !== player.id) return false;
+    logger.info("3333333333333333")
+    if (!player.cards.some(c => c.suit === card.suit && c.value === card.value)) return false;
+    logger.info("4444444444444444")
+    // Its working perfect
+    if (game.currentTrick && game.currentTrick.length > 0) {
+      const leadSuit = game.currentTrick[0].suit;
+      const hasLeadSuit = player.cards.some(c => c.suit === leadSuit);
+      if (hasLeadSuit && card.suit !== leadSuit) return false;
+    }
+    logger.info("6666666666666666")
     return true;
   }
 
-  static isValidBid(game: Game, bid: number): boolean {
-    // Implement bid validation logic
+  static isValidBid(game: Game, player: Player, bid: number): boolean {
+    if (game.status !== "BIDDING") return false;
+    if (game.currentTurn !== player.id) return false;
+    if (bid < 0 || bid > game.currentRound + 1) return false;
+
+    // Last bidder rule
+    const bidsPlaced = game.players.filter(p => typeof p.currentBid === "number" && p.currentBid >= 0);
+    if (bidsPlaced.length === game.players.length - 1) {
+      const sumOfPreviousBids = game.players.reduce((sum, p) => {
+        if (p.id !== player.id && typeof p.currentBid === "number" && p.currentBid >= 0) {
+          return sum + p.currentBid;
+        }
+        return sum;
+      }, 0);
+      if (sumOfPreviousBids + bid === game.currentRound) return false;
+    }
     return true;
   }
 }

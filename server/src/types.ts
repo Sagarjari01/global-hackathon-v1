@@ -30,7 +30,14 @@ export enum Suit {
     cardsPerRound: number;
     currentTurn: string;
     status: 'WAITING' | 'BIDDING' | 'PLAYING' | 'FINISHED';
-    currentTrick?: any[];
+    currentTrick?: TrickCard[];
     currentSuit?: Suit;
     winner?: Player;
+    turnCount: number;
+  }
+
+  export interface TrickCard {
+    suit: Suit;
+    value: number;
+    playedBy: string; // Player ID
   }

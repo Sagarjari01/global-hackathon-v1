@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { socket } from './utils/socket';
+// import { socket } from './utils/socket';
 import './App.css';
 import { Game } from './components/Game';
 
@@ -9,50 +9,50 @@ function App() {
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    socket.on('gameCreated', (game) => {
-      console.log('Game created event:', game);
-      setGameId(game.id);
-      setGameState(game);
-    });
+  // useEffect(() => {
+  //   socket.on('gameCreated', (game) => {
+  //     console.log('Game created event:', game);
+  //     setGameId(game.id);
+  //     setGameState(game);
+  //   });
 
-    socket.on('gameState', (state) => {
-      setGameState(state);
-    });
+  //   socket.on('gameState', (state) => {
+  //     setGameState(state);
+  //   });
 
-    socket.on('error', (errorMessage) => {
-      setError(errorMessage);
-    });
+  //   socket.on('error', (errorMessage) => {
+  //     setError(errorMessage);
+  //   });
 
-    socket.on('playerJoined', (player) => {
-      console.log('Player joined:', player);
-    });
+  //   socket.on('playerJoined', (player) => {
+  //     console.log('Player joined:', player);
+  //   });
 
-    socket.on('gameReadyToStart', () => {
-      console.log('Game ready to start!');
-    });
+  //   socket.on('gameReadyToStart', () => {
+  //     console.log('Game ready to start!');
+  //   });
 
-    return () => {
-      socket.off('gameCreated');
-      socket.off('gameState');
-      socket.off('error');
-      socket.off('playerJoined');
-      socket.off('gameReadyToStart');
-    };
-  }, []);
+  //   return () => {
+  //     socket.off('gameCreated');
+  //     socket.off('gameState');
+  //     socket.off('error');
+  //     socket.off('playerJoined');
+  //     socket.off('gameReadyToStart');
+  //   };
+  // }, []);
 
-  const createGame = () => {
-    console.log("called...")
-    socket.emit('createGame', 5);
-  };
+  // const createGame = () => {
+  //   console.log("called...")
+  //   socket.emit('createGame', 5);
+  // };
 
-  const joinGame = () => {
-    if (!gameId || !playerName) {
-      setError('Game ID and Player Name are required');
-      return;
-    }
-    socket.emit('joinGame', gameId, playerName);
-  };
+  // const joinGame = () => {
+  //   if (!gameId || !playerName) {
+  //     setError('Game ID and Player Name are required');
+  //     return;
+  //   }
+  //   socket.emit('joinGame', gameId, playerName);
+  // };
 
   return (
     <div className="App">
