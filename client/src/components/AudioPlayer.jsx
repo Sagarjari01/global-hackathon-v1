@@ -19,7 +19,7 @@ const AudioPlayer = () => {
         await audio.play();
         setIsPlaying(true);
       } catch (error) {
-        console.log('Autoplay prevented by browser. User interaction needed.');
+        // console.log('Autoplay prevented by browser. User interaction needed.');
         setIsPlaying(false);
       }
     };

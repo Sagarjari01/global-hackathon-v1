@@ -13,19 +13,6 @@ const getCardLabel = (card) => {
     (card.suit === 'HEARTS' ? '♥' : card.suit === 'DIAMONDS' ? '♦' : card.suit === 'CLUBS' ? '♣' : card.suit === 'SPADES' ? '♠' : '');
 };
 
-// Debounce function to prevent multiple rapid state updates
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
 const RevampedGameContainer = () => {
   // Game setup and state
   const [playerName, setPlayerName] = useState('');
@@ -43,78 +30,72 @@ const RevampedGameContainer = () => {
     animating: false
   });
   
-  // Animation states consolidated
-  const [animationState, setAnimationState] = useState({
-    isAnimating: false,
-    canPlayCard: true,
-    activeCardAnimation: null,
-    trickWinnerId: null
-  });
+  // Simple card play state - just track which card is being played
+  const [pendingCard, setPendingCard] = useState(null);
 
-  // Refs for tracking state
-  const animationStateRef = useRef(animationState);
-  const roundCompleteTimeoutRef = useRef(null);
+  // Animation states for trick winner
+  const [trickWinnerId, setTrickWinnerId] = useState(null);
+
+  // Refs for tracking
   const winnerTimeoutRef = useRef(null);
-  const previousRoundRef = useRef(null);
   const cleanupTimeoutsRef = useRef([]);
-  const isTransitioningRef = useRef(false);
-
-  // Add a ref to track if a card is currently being played
-  const isCardPlayInProgressRef = useRef(false);
-  const lastPlayedCardRef = useRef(null);
 
   // Update ref when animation state changes
   useEffect(() => {
-    animationStateRef.current = animationState;
-  }, [animationState]);
-
-  // Memoize the animation state update function with debouncing
-  const updateAnimationState = useCallback((updates) => {
-    const debouncedUpdate = debounce((updates) => {
-      setAnimationState(prev => {
-        // Only update if there are actual changes
-        const hasChanges = Object.keys(updates).some(
-          key => prev[key] !== updates[key]
-        );
-        return hasChanges ? { ...prev, ...updates } : prev;
-      });
-    }, 100);
-    debouncedUpdate(updates);
-  }, []);
+    console.log("👀 Monitoring turn change:", {
+      currentTurn: gameState?.currentTurn,
+      currentUserId,
+      pendingCard: pendingCard ? `${pendingCard.value} of ${pendingCard.suit}` : null
+    });
+    
+    // Clean up pending card when user's turn ends
+    if (gameState?.currentTurn !== currentUserId) {
+      if (pendingCard) {
+        console.log("🧹 Clearing pending card - not user's turn");
+      }
+      setPendingCard(null);
+    }
+  }, [gameState?.currentTurn, currentUserId, pendingCard]);
 
   // Memoize the game state update function
   const updateGameState = useCallback((newState) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("updateGameState called with:", {
-        newCurrentTrick: newState?.currentTrick,
-        newCurrentTrickLength: newState?.currentTrick?.length,
-        newCurrentTurn: newState?.currentTurn,
-        newStatus: newState?.status
-      });
+    console.log("🔄 Game state update received:", {
+      previousTurn: gameState?.currentTurn,
+      newTurn: newState?.currentTurn,
+      previousStatus: gameState?.status,
+      newStatus: newState?.status,
+      previousTrickCount: gameState?.turnCount,
+      newTrickCount: newState?.turnCount,
+      currentTrick: newState?.currentTrick,
+      newState: newState
+    });
+    
+    // Clear pending card if no current trick or trick is empty
+    if (!newState.currentTrick || newState.currentTrick.length === 0) {
+      if (pendingCard) {
+        console.log("🧹 Clearing pending card - new trick starting");
+        setPendingCard(null);
+      }
+    }
+    
+    // Clear pending card if trick evaluation just finished
+    if (gameState?.trickEvaluationInProgress && !newState.trickEvaluationInProgress) {
+      if (pendingCard) {
+        console.log("🧹 Clearing pending card - trick evaluation finished");
+        setPendingCard(null);
+      }
     }
     
     setGameState(prev => {
       // Only update if there are actual changes
       if (JSON.stringify(prev) === JSON.stringify(newState)) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log("No changes detected, keeping previous state");
-        }
+        console.log("⏭️ No changes in game state, skipping update");
         return prev;
       }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Updating game state - previous vs new:", {
-          prevCurrentTrick: prev?.currentTrick?.length,
-          newCurrentTrick: newState?.currentTrick?.length,
-          prevCurrentTurn: prev?.currentTurn,
-          newCurrentTurn: newState?.currentTurn
-        });
-      }
-      
-      // Replace the entire state instead of merging to ensure proper sync
+      console.log("✅ Game state updated");
       return newState;
     });
-  }, []);
+  }, [gameState, pendingCard]);
 
   // Helper to safely set timeouts with automatic cleanup
   const safeSetTimeout = useCallback((callback, delay) => {
@@ -129,84 +110,34 @@ const RevampedGameContainer = () => {
       clearTimeout(winnerTimeoutRef.current);
       winnerTimeoutRef.current = null;
     }
-    if (roundCompleteTimeoutRef.current) {
-      clearTimeout(roundCompleteTimeoutRef.current);
-      roundCompleteTimeoutRef.current = null;
-    }
     cleanupTimeoutsRef.current.forEach(timeoutId => {
       clearTimeout(timeoutId);
     });
     cleanupTimeoutsRef.current = [];
   }, []);
 
-  // Reset animation state with proper timing
-  const resetAnimationState = useCallback(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Resetting animation state");
-    }
-    
-    // Clear any existing timeouts
-    clearAllTimeouts();
-    
-    // Reset the transitioning flag and card play lock
-    isTransitioningRef.current = false;
-    isCardPlayInProgressRef.current = false;
-    lastPlayedCardRef.current = null;
-    
-    // Update animation state
-    updateAnimationState({
-      isAnimating: false,
-      canPlayCard: true,
-      activeCardAnimation: null,
-      trickWinnerId: null
-    });
-  }, [updateAnimationState, clearAllTimeouts]);
-
   // Memoize the trick complete handler
   const handleTrickComplete = useCallback((data) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("trick complete event....", data);
-    }
+    console.log("trick complete event....", data);
     
-    // Set transitioning flag to prevent any card plays during trick completion
-    isTransitioningRef.current = true;
-    // Reset card play lock when trick completes
-    isCardPlayInProgressRef.current = false;
-    
-    updateAnimationState({ 
-      trickWinnerId: data.winnerId,
-      isAnimating: true,
-      canPlayCard: false
-    });
+    setTrickWinnerId(data.winnerId);
     
     if (winnerTimeoutRef.current) {
       clearTimeout(winnerTimeoutRef.current);
     }
     
     winnerTimeoutRef.current = safeSetTimeout(() => {
-      resetAnimationState();
+      setTrickWinnerId(null);
     }, 1800);
-  }, [updateAnimationState, safeSetTimeout, resetAnimationState]);
+  }, [safeSetTimeout]);
 
-  // Memoize the round complete handler with debouncing
+  // Simplified round complete handler
   const handleRoundComplete = useCallback(() => {
-    const debouncedHandler = debounce(() => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Round complete event received, resetting animation state");
-      }
-
-      // Clear any existing timeouts
-      if (roundCompleteTimeoutRef.current) {
-        clearTimeout(roundCompleteTimeoutRef.current);
-      }
-
-      // Set a new timeout to batch the state updates
-      roundCompleteTimeoutRef.current = safeSetTimeout(() => {
-        resetAnimationState();
-      }, 100);
-    }, 300);
-    debouncedHandler();
-  }, [resetAnimationState, safeSetTimeout]);
+    console.log("Round complete event received");
+    // Reset any pending states
+    setPendingCard(null);
+    setTrickWinnerId(null);
+  }, []);
 
   // Set up WebSocket event listeners
   useEffect(() => {
@@ -255,6 +186,7 @@ const RevampedGameContainer = () => {
       });
     });
     const unsubscribeError = apiService.onError(setError);
+    // console.log({unsubscribeError})
 
     return () => {
       unsubscribeGameState();
@@ -265,138 +197,24 @@ const RevampedGameContainer = () => {
     };
   }, [gameState, playerName, currentUserId, updateGameState, handleTrickComplete, handleRoundComplete]);
 
-  // Memoize the animation state debug log
+  // Memoize the animation state debug log - simplified
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log("animationState changed<***********>", {
-        isAnimating: animationState.isAnimating,
-        canPlayCard: animationState.canPlayCard,
-        activeCardAnimation: animationState.activeCardAnimation,
-        trickWinnerId: animationState.trickWinnerId,
+      console.log("Game state changed:", {
+        pendingCard: pendingCard,
+        trickWinnerId: trickWinnerId,
         gameStatus: gameState?.status,
         currentTurn: gameState?.currentTurn,
         currentUserId: currentUserId
       });
     }
-  }, [animationState, gameState?.status, gameState?.currentTurn, currentUserId]);
+  }, [pendingCard, trickWinnerId, gameState?.status, gameState?.currentTurn, currentUserId]);
 
   // Round completion state
-  const [roundState, setRoundState] = useState({
-    showWinner: false,
-    winnerData: null
-  });
-  
-  // Game completion state
   const [gameEndState, setGameEndState] = useState({
     finished: false,
     winner: null
   });
-  
-  // Reset card animation when round changes
-  useEffect(() => {
-    if (!gameState) return;
-    
-    const currentRound = gameState.currentRound;
-    
-    if (previousRoundRef.current !== null && currentRound !== previousRoundRef.current) {
-      // Reset animation state when round changes
-      isCardPlayInProgressRef.current = false;
-      lastPlayedCardRef.current = null;
-      setAnimationState({
-        isAnimating: false,
-        canPlayCard: true,
-        activeCardAnimation: null,
-        trickWinnerId: null
-      });
-    }
-    
-    previousRoundRef.current = currentRound;
-  }, [gameState?.currentRound, gameState]);
-
-  // Reset locks when it's no longer the current user's turn
-  useEffect(() => {
-    if (!gameState) return;
-    
-    // Reset locks when turn changes away from current user
-    if (gameState.currentTurn !== currentUserId && isCardPlayInProgressRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Resetting card play lock - no longer current user's turn");
-      }
-      isCardPlayInProgressRef.current = false;
-      lastPlayedCardRef.current = null;
-      // Don't reset animation state here if we're in a transition period
-      if (!isTransitioningRef.current) {
-        updateAnimationState({
-          isAnimating: false,
-          canPlayCard: true,
-          activeCardAnimation: null
-        });
-      }
-    }
-  }, [gameState?.currentTurn, currentUserId, gameState, updateAnimationState]);
-
-  // Track current trick to detect successful card plays
-  const currentTrickLengthRef = useRef(0);
-  
-  // Reset locks when current trick changes (indicating successful card play)
-  useEffect(() => {
-    if (!gameState?.currentTrick) {
-      currentTrickLengthRef.current = 0;
-      return;
-    }
-    
-    const newTrickLength = gameState.currentTrick.length;
-    const previousTrickLength = currentTrickLengthRef.current;
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Trick length change detected:", {
-        previousLength: previousTrickLength,
-        newLength: newTrickLength,
-        isCardPlayInProgress: isCardPlayInProgressRef.current,
-        isTransitioning: isTransitioningRef.current
-      });
-    }
-    
-    // Only reset locks when a NEW trick starts (length goes to 0), not when trick completes
-    if (newTrickLength === 0 && previousTrickLength > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("New trick started - resetting all locks");
-      }
-      isCardPlayInProgressRef.current = false;
-      lastPlayedCardRef.current = null;
-      isTransitioningRef.current = false; // Also reset transitioning flag
-      updateAnimationState({
-        isAnimating: false,
-        canPlayCard: true,
-        activeCardAnimation: null,
-        trickWinnerId: null
-      });
-    }
-    // If trick is complete (4 cards), reset card play lock but keep animation locked for trick completion animation
-    else if (newTrickLength === 4 && previousTrickLength < 4) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Trick complete (4 cards) - resetting card play lock but keeping animation locked");
-      }
-      isCardPlayInProgressRef.current = false;
-      // Keep animation state as is - will be handled by trick complete event
-    }
-    // If trick length increased but we're still in the same trick, keep locks engaged
-    else if (newTrickLength > previousTrickLength && isCardPlayInProgressRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card successfully played but trick not complete - keeping ALL locks until trick finishes", {
-          previousLength: previousTrickLength,
-          newLength: newTrickLength
-        });
-      }
-      
-      // Keep BOTH the card play lock AND animation state locked until trick completes
-      // This prevents rapid clicking of multiple cards
-      // isCardPlayInProgressRef.current = false; // DON'T reset this yet!
-      // Do NOT reset animation state here - wait for trick to complete
-    }
-    
-    currentTrickLengthRef.current = newTrickLength;
-  }, [gameState?.currentTrick, updateAnimationState]);
 
   // Memoize players data to prevent unnecessary recalculations
   const mappedPlayers = useMemo(() => {
@@ -525,117 +343,50 @@ const RevampedGameContainer = () => {
     }
   }, [gameState, bidState.amount, isValidBid, safeSetTimeout]);
 
-  // Handle card play with improved state management
+  // Handle card play with simplified state management
   const handleCardPlay = useCallback(async (card) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("card play called with card:", card);
-      console.log("Current game state:", {
-        gameState,
-        ...animationStateRef.current,
-        currentTurn: gameState?.currentTurn,
-        currentUserId,
-        isCardPlayInProgress: isCardPlayInProgressRef.current,
-        lastPlayedCard: lastPlayedCardRef.current,
-        currentTrickLength: gameState?.currentTrick?.length || 0
+    console.log("=== SIMPLIFIED CARD PLAY ===");
+    console.log("Card:", card);
+    console.log("Pending card:", pendingCard);
+    console.log("Current turn:", gameState?.currentTurn);
+    console.log("Current user:", currentUserId);
+    console.log("Game status:", gameState?.status);
+    console.log("Is bidding:", gameState?.status === 'BIDDING');
+    console.log("Trick count:", gameState?.turnCount);
+    console.log("Current trick:", gameState?.currentTrick);
+
+    // Simple validation - only check basic conditions
+    if (!gameState || 
+        gameState.status !== 'PLAYING' ||
+        gameState.currentTurn !== currentUserId ||
+        pendingCard) {
+      console.log("❌ Card play blocked");
+      console.log("Blocked reason:", {
+        noGameState: !gameState,
+        statusNotPlaying: gameState?.status !== 'PLAYING',
+        notPlayerTurn: gameState?.currentTurn !== currentUserId,
+        hasPendingCard: !!pendingCard
       });
-    }
-
-    // Immediate atomic check and lock to prevent race conditions
-    if (isCardPlayInProgressRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card play blocked - already in progress");
-      }
       return;
     }
 
-    // Check if current user has already played in this trick
-    if (gameState?.currentTrick?.some(playedCard => playedCard.playerId === currentUserId)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card play blocked - user already played in this trick");
-      }
-      return;
-    }
-
-    // Set card play lock immediately to prevent race conditions
-    isCardPlayInProgressRef.current = true;
-
-    // Check if we can play a card (after setting the lock)
-    // FIXED: Remove the trick length check or handle empty arrays properly
-    const canPlay = !isTransitioningRef.current && 
-                   gameState && 
-                   !animationStateRef.current.isAnimating && 
-                   animationStateRef.current.canPlayCard &&
-                   gameState.currentTurn === currentUserId &&
-                   gameState.status === 'PLAYING' &&
-                   (!gameState.currentTrick || gameState.currentTrick.length < 4); // Allow play if trick is not complete OR not initialized
-
-    if (!canPlay) {
-      // Reset the lock if we can't play
-      isCardPlayInProgressRef.current = false;
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card play blocked because:", {
-          noGameState: !gameState,
-          isAnimating: animationStateRef.current.isAnimating,
-          cannotPlayCard: !animationStateRef.current.canPlayCard,
-          isTransitioning: isTransitioningRef.current,
-          notCurrentTurn: gameState?.currentTurn !== currentUserId,
-          notPlayingStatus: gameState?.status !== 'PLAYING',
-          trickComplete: gameState?.currentTrick?.length >= 4,
-          currentTrickLength: gameState?.currentTrick?.length,
-          currentTurn: gameState?.currentTurn,
-          currentUserId: currentUserId,
-          gameStateCurrentTrick: gameState?.currentTrick,
-          canPlayCalculation: (!gameState.currentTrick || gameState.currentTrick.length < 4) // Updated to match the new condition
-        });
-      }
-      return;
-    }
-
-    // Additional check to prevent playing the same card twice
-    if (lastPlayedCardRef.current && 
-        lastPlayedCardRef.current.suit === card.suit && 
-        lastPlayedCardRef.current.value === card.value) {
-      isCardPlayInProgressRef.current = false;
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card play blocked - same card already played");
-      }
-      return;
-    }
-
-    lastPlayedCardRef.current = card;
-
-    // Set animation state before playing card
-    updateAnimationState({
-      isAnimating: true,
-      canPlayCard: false,
-      activeCardAnimation: card
-    });
+    // Set this card as pending immediately
+    setPendingCard(card);
 
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Attempting to play card via API");
-      }
-      
+      console.log("🚀 Playing card via API");
       await apiService.playCard(gameState.id, card);
+      console.log("✅ Card played successfully");
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Card played successfully");
-      }
-      
-      // The locks will be reset when the game state updates with the new trick
+      // Note: pendingCard will be cleared when game state updates or turn changes
     } catch (error) {
-      console.error("Error playing card:", error);
-      // Reset animation state and lock on error
-      isCardPlayInProgressRef.current = false;
-      lastPlayedCardRef.current = null;
-      updateAnimationState({
-        isAnimating: false,
-        canPlayCard: true,
-        activeCardAnimation: null
-      });
+      console.log("555555555555")
+      console.error("❌ Error playing card:", error);
+      console.log("77777777777")
+      // Reset pending card on error
+      setPendingCard(null);
     }
-  }, [gameState, currentUserId, updateAnimationState]);
+  }, [gameState, currentUserId, pendingCard]);
 
   // Update bid amount handler
   const handleBidAmountChange = useCallback((amount) => {
@@ -668,7 +419,7 @@ const RevampedGameContainer = () => {
           playedCards={playedCards}
           currentUserId={currentUserId}
           onCardClick={handleCardPlay}
-          trickWinnerId={animationState.trickWinnerId}
+          trickWinnerId={trickWinnerId}
           trumpSuit={gameInfo.trumpSuit}
           roundInfo={gameInfo.roundInfo}
           gameStatus={gameInfo.gameStatus}
@@ -678,13 +429,11 @@ const RevampedGameContainer = () => {
           setBidAmount={handleBidAmountChange}
           onSubmitBid={handleSubmitBid}
           bidError={bidState.error}
-          animating={bidState.animating || animationState.isAnimating}
+          animating={bidState.animating}
           gameFinished={gameEndState.finished}
           winner={gameEndState.winner}
           onNewGame={handleNewGame}
-          activeCardAnimation={animationState.activeCardAnimation}
-          showRoundWinner={roundState.showWinner}
-          roundWinnerData={roundState.winnerData}
+          pendingCard={pendingCard}
         />
       )}
     </div>

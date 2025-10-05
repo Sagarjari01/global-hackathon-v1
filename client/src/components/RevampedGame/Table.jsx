@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import styles from '../RevampedGame.module.css';
 import PlayerSeat from './PlayerSeat';
 import LeaderboardPopup from './LeaderboardPopup';
@@ -197,7 +197,7 @@ const BiddingControls = memo(({ bidAmount, setBidAmount, onSubmitBid, bidError, 
           max={10} 
           value={bidAmount} 
           onChange={handleInputChange} 
-          disabled={animating}
+          disabled={true}
           className={styles.bidInput}
         />
         <button 
@@ -232,7 +232,7 @@ const PlayerSection = memo(({
   isBidding,
   isCurrentUserTurn,
   onCardClick,
-  activeCardAnimation
+  pendingCard
 }) => {
   const position = useMemo(() => 
     getPlayerPosition(idx, totalPlayers, isCurrentUserPlayer),
@@ -264,14 +264,13 @@ const PlayerSection = memo(({
         isCurrentTurn={player.isCurrentTurn && !gameFinished}
         isWinner={player.id === trickWinnerId}
         position={{}}
-        pos={isCurrentUserPlayer ? 'bottom' : `player-${idx}`} // We use a generic position identifier since exact positioning is handled by getSeatPosition
+        pos={isCurrentUserPlayer ? 'bottom' : `player-${idx}`}
         tricks={player.tricks}
         bid={player.currentBid}
         onCardClick={!gameFinished && isCurrentUserPlayer ? onCardClick : undefined}
         isBidding={isBidding && !gameFinished}
         isCurrentUserTurn={isCurrentUserTurn && !gameFinished && isCurrentUserPlayer}
-        activeCardAnimation={activeCardAnimation && activeCardAnimation.playerId === player.id ? 
-          activeCardAnimation.card : null}
+        pendingCard={isCurrentUserPlayer ? pendingCard : null}
         additionalClasses={additionalClasses}
       />
     </div>
@@ -307,9 +306,7 @@ const Table = ({
   gameFinished, 
   winner, 
   onNewGame,
-  activeCardAnimation,
-  showRoundWinner,
-  roundWinnerData
+  pendingCard
 }) => {
   // Memoize player data
   const { currentUser, otherPlayers, totalPlayers } = useMemo(() => ({
@@ -328,18 +325,6 @@ const Table = ({
   
   // Toast notification state
   const [toastMessage, setToastMessage] = useState(null);
-  
-  // Show toast notification when round winner is announced
-  useEffect(() => {
-    if (!showRoundWinner || !roundWinnerData) return;
-    
-    setToastMessage({
-      type: 'roundComplete',
-      title: `Round ${roundWinnerData.roundNumber} Completed!`,
-      playerName: roundWinnerData.winner.name,
-      points: roundWinnerData.scoreChange
-    });
-  }, [showRoundWinner, roundWinnerData]);
   
   // Memoize the isWinningPlayer callback
   const isWinningPlayer = useCallback((player) => {
@@ -382,6 +367,7 @@ const Table = ({
       )}
       
       {/* Game Header */}
+      <div className={styles.gameHeaderContainer}>
       <GameHeader 
         gameFinished={gameFinished} 
         roundInfo={roundInfo} 
@@ -390,6 +376,7 @@ const Table = ({
       
       {/* Trump Suit Display */}
       {trumpSuit && !gameFinished && <TrumpSuitDisplay trumpSuit={trumpSuit} />}
+      </div>
       
       <div className={styles.pokerTable}>
         {/* Leaderboard Popup */}
@@ -409,7 +396,7 @@ const Table = ({
             isBidding={isBidding}
             isCurrentUserTurn={isCurrentUserTurn}
             onCardClick={handleCardClick}
-            activeCardAnimation={activeCardAnimation}
+            pendingCard={pendingCard}
           />
         )}
         
@@ -427,7 +414,7 @@ const Table = ({
             isBidding={isBidding}
             isCurrentUserTurn={isCurrentUserTurn}
             onCardClick={handleCardClick}
-            activeCardAnimation={activeCardAnimation}
+            pendingCard={null}
           />
         ))}
         

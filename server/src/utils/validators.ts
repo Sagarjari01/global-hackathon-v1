@@ -4,15 +4,34 @@ import logger from './logger';
 export class GameValidator {
   static canPlayCard(game: Game, player: Player, card: Card): boolean {
     logger.info("-----------canPlayCard-----------")
-    if (game.status !== "PLAYING") return false;
-    if (game.currentTurn !== player.id) return false;
-    if (!player.cards.some(c => c.suit === card.suit && c.value === card.value)) return false;
+    logger.info(`Game status: ${game.status}`)
+    logger.info(`Current turn: ${game.currentTurn}, Player ID: ${player.id}`)
+    logger.info(`Card to play: ${JSON.stringify(card)}`)
+    logger.info(`Player cards: ${JSON.stringify(player.cards)}`)
+    logger.info(`Current trick: ${JSON.stringify(game.currentTrick)}`)
+    
+    if (game.status !== "PLAYING") {
+      logger.info("❌ Game status is not PLAYING")
+      return false;
+    }
+    if (game.currentTurn !== player.id) {
+      logger.info("❌ Not player's turn")
+      return false;
+    }
+    if (!player.cards.some(c => c.suit === card.suit && c.value === card.value)) {
+      logger.info("❌ Card not found in player's hand")
+      return false;
+    }
     // Its working perfect
     if (game.currentTrick && game.currentTrick.length > 0) {
       const leadSuit = game.currentTrick[0].suit;
       const hasLeadSuit = player.cards.some(c => c.suit === leadSuit);
-      if (hasLeadSuit && card.suit !== leadSuit) return false;
+      if (hasLeadSuit && card.suit !== leadSuit) {
+        logger.info(`❌ Must follow lead suit ${leadSuit}, but played ${card.suit}`)
+        return false;
+      }
     }
+    logger.info("✅ Card play is valid")
     return true;
   }
 

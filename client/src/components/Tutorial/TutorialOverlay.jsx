@@ -67,7 +67,7 @@ const TutorialOverlay = ({
         for (const sel of selectors) {
           element = document.querySelector(sel.trim());
           if (element) {
-            console.log(`Found element for ${highlight} with selector ${sel}:`, element);
+            // console.log(`Found element for ${highlight} with selector ${sel}:`, element);
             
             // Special handling for player hand to get better bounds
             if (highlight === 'currentPlayerHand') {
@@ -86,7 +86,7 @@ const TutorialOverlay = ({
                 });
                 
                 if (minLeft !== Infinity) {
-                  console.log('Using calculated card bounds:', { minLeft, minTop, maxRight, maxBottom });
+                  // console.log('Using calculated card bounds:', { minLeft, minTop, maxRight, maxBottom });
                   const rect = {
                     top: minTop,
                     left: minLeft,
@@ -116,7 +116,7 @@ const TutorialOverlay = ({
                 });
                 
                 if (minLeft !== Infinity) {
-                  console.log('Using calculated center area bounds:', { minLeft, minTop, maxRight, maxBottom });
+                  // console.log('Using calculated center area bounds:', { minLeft, minTop, maxRight, maxBottom });
                   const rect = {
                     top: minTop - 10, // Add some padding
                     left: minLeft - 10,
@@ -129,7 +129,7 @@ const TutorialOverlay = ({
               }
             }
             
-            console.log('Element rect:', element.getBoundingClientRect());
+            // console.log('Element rect:', element.getBoundingClientRect());
             break;
           }
         }
@@ -143,7 +143,7 @@ const TutorialOverlay = ({
             height: rect.height
           });
         } else {
-          console.log(`No element found for ${highlight} with selector ${selector}`);
+          // console.log(`No element found for ${highlight} with selector ${selector}`);
           setHighlightedElement(null);
         }
       }

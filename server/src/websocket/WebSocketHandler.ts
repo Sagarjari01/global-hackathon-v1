@@ -76,9 +76,12 @@ export class WebSocketHandler {
       socket.on(GameEvents.PLAY_CARD, (gameId: string, card: Card) => {
         try {
           logger.info(`Received playCard event for game ${gameId}`);
+          logger.info(`Card to play: ${JSON.stringify(card)}`);
           
           // Play the human player's card
           this.gameService.playCard(gameId, 'player-1', card);
+          
+          logger.info("✅ Card play successful, sending updated game state");
           
           // Send updated game state to all clients in the game room
           const gameState = this.gameService.getGameState(gameId);
@@ -89,8 +92,10 @@ export class WebSocketHandler {
           logger.info("333333333333333333333")
           this.scheduleNextAITurn(gameId);
         } catch (error) {
-          logger.error('Error playing card:', error);
+          logger.error('❌ Error playing card:', error);
+          logger.error(`Error message: ${error instanceof Error ? error.message : 'Failed to play card'}`);
           socket.emit(GameEvents.ERROR, error instanceof Error ? error.message : 'Failed to play card');
+          // NOTE: Not emitting game state when there's an error
         }
       });
 

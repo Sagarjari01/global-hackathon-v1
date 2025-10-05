@@ -47,38 +47,6 @@ app.post('/api/game/create', (req, res) => {
   }
 });
 
-// API endpoint for playing a card - will be migrated to WebSockets
-app.post('/api/game/:gameId/play', (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const { card } = req.body;
-    gameService.playCard(gameId, 'player-1', card);
-    // No longer immediately play AI turns
-    // Simply return the game state after player's move
-    const gameState = gameService.getGameState(gameId);
-    res.json(gameState);
-  } catch (error) {
-    logger.error('Error playing card:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to play card' });
-  }
-});
-
-// API endpoint for placing a bid - will be migrated to WebSockets
-app.post('/api/game/:gameId/bid', (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const { bid } = req.body;
-    gameService.placeBid(gameId, 'player-1', bid);
-    // No longer immediately play AI turns
-    // Simply return the game state after player's bid
-    const gameState = gameService.getGameState(gameId)
-    res.json(gameState);
-  } catch (error) {
-    logger.error('Error placing bid:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to place bid' });
-  }
-});
-
 // Initialize WebSocket handler
 new WebSocketHandler(io, gameService);
 

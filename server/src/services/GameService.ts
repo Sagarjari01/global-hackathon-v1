@@ -116,7 +116,6 @@ export class GameService {
 
     return trick[0];
   }
-  // TODO: git rebase krvu
 
   private evaluateTrick(gameId: string): void {
     logger.info("-----------------evaluateTrick()-----------------");
@@ -277,7 +276,6 @@ export class GameService {
     if (game.players.some((p) => p.name === playerName))
       throw new Error("Player name taken");
 
-    // TODO: for multiplayer, currentBid should be -1 at start
     const newPlayer: Player = {
       id: player_id,
       name: playerName,
@@ -420,68 +418,73 @@ export class GameService {
   }
 
   playCard(gameId: string, playerId: string, card: any): void {
-    logger.info("-----------------playCard()-----------------");
-    const game = this.getGame(gameId);
-    if (!game) throw new Error("Game not found");
+    try{
+      logger.info("-----------------playCard()-----------------");
+      const game = this.getGame(gameId);
+      if (!game) throw new Error("Game not found");
 
-    const player = game.players.find((p) => p.id === playerId);
-    if (!player) throw new Error("Player not found");
+      const player = game.players.find((p) => p.id === playerId);
+      if (!player) throw new Error("Player not found");
 
-    if (game.currentTurn !== playerId) {
-      throw new Error("Not your turn");
-    }
+      if (game.currentTurn !== playerId) {
+        throw new Error("Not your turn");
+      }
 
-    if (game.status !== "PLAYING") {
-      throw new Error("Game is not in playing phase");
-    }
+      if (game.status !== "PLAYING") {
+        throw new Error("Game is not in playing phase");
+      }
 
-    if (player.cards.length === 0) {
-      throw new Error("No cards left to play");
-    }
+      if (player.cards.length === 0) {
+        throw new Error("No cards left to play");
+      }
 
-    // Use GameValidator for card play validation
-    if (!GameValidator.canPlayCard(game, player, card)) {
-      throw new Error("Invalid card play");
-    }
+      // Use GameValidator for card play validation
+      if (!GameValidator.canPlayCard(game, player, card)) {
+        throw new Error("Invalid card play");
+      }
 
-    // Find matching card in player's hand
-    const cardIndex = player.cards.findIndex(
-      (c) => c.suit === card.suit && c.value === card.value
-    );
-    if (cardIndex === -1) throw new Error("Card not found in player hand");
+      // Find matching card in player's hand
+      const cardIndex = player.cards.findIndex(
+        (c) => c.suit === card.suit && c.value === card.value
+      );
+      if (cardIndex === -1) throw new Error("Card not found in player hand");
 
-    // Add card to trick
-    const trickCard = {
-      ...player.cards[cardIndex],
-      playedBy: playerId,
-    };
+      // Add card to trick
+      const trickCard = {
+        ...player.cards[cardIndex],
+        playedBy: playerId,
+      };
 
-    // Check if this is the first card in the trick
-    if (!game.currentTrick || game.currentTrick.length === 0) {
-      game.currentSuit = trickCard.suit;
-      game.trickStartingPlayer = playerId; // Track who started this trick
-    }
+      // Check if this is the first card in the trick
+      if (!game.currentTrick || game.currentTrick.length === 0) {
+        game.currentSuit = trickCard.suit;
+        game.trickStartingPlayer = playerId; // Track who started this trick
+      }
 
-    // Remove from player's hand
-    player.cards.splice(cardIndex, 1);
+      // Remove from player's hand
+      player.cards.splice(cardIndex, 1);
 
-    logger.info(
-      `Player ${player.name} played card: ${trickCard.value} of ${trickCard.suit}`
-    );
-    // Add to trick
-    if (!game.currentTrick) {
-      game.currentTrick = [];
-    }
-    game.currentTrick.push(trickCard);
-    game.turnCount++;
+      logger.info(
+        `Player ${player.name} played card: ${trickCard.value} of ${trickCard.suit}`
+      );
+      // Add to trick
+      if (!game.currentTrick) {
+        game.currentTrick = [];
+      }
+      game.currentTrick.push(trickCard);
+      game.turnCount++;
 
-    // Check if trick is complete
-    if (game.turnCount === game.players.length) {
-      this.evaluateTrick(gameId);
-      logger.info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-      game.turnCount = 0;
-    } else {
-      this.moveToNextTurn(gameId);
+      // Check if trick is complete
+      if (game.turnCount === game.players.length) {
+        this.evaluateTrick(gameId);
+        logger.info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+        game.turnCount = 0;
+      } else {
+        this.moveToNextTurn(gameId);
+      }
+    } catch (error) {
+      logger.error(`Error in playCard for game ${gameId}:`, error);
+      throw error; // Re-throw to handle in API layer
     }
   }
 

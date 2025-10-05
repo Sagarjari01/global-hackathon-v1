@@ -56,28 +56,47 @@ const PlayerCard = memo(
     cardWidth,
     overlap,
     isLastCard,
-    isCardPlayPending,
-    playedCard,
+    pendingCard,
+    totalCards,
   }) => {
-    const isPlayedCard = playedCard && playedCard.suit === card.suit && playedCard.value === card.value;
-    const isDisabled = !isCurrentUserTurn || isBidding || isCardPlayPending;
+    const isPendingCard = pendingCard && pendingCard.suit === card.suit && pendingCard.value === card.value;
+    const isDisabled = !isCurrentUserTurn || isBidding || !!pendingCard;
     
+    console.log("PlayerCard Debug:", {
+      cardLabel: `${card.value} of ${card.suit}`,
+      isCurrentUserTurn,
+      isBidding,
+      pendingCard: pendingCard ? `${pendingCard.value} of ${pendingCard.suit}` : null,
+      isDisabled,
+      isPendingCard
+    });
+    
+    // Calculate fan positioning and rotation
+    const centerIndex = (totalCards - 1) / 2;
+    const offsetFromCenter = index - centerIndex;
+    const maxAngle = 6; // Reduced maximum rotation angle for better alignment
+    const rotation = totalCards > 1 ? (offsetFromCenter * maxAngle) / Math.max(1, Math.ceil(centerIndex)) : 0;
+    
+    // Calculate spacing - keep all cards on same line
+    const baseSpacing = cardWidth - overlap;
     return (
       <div
         key={`${card.suit}-${card.value}`}
         className={`${styles.fanCardUser} ${isRed ? styles.red : ""} 
-        ${isDisabled ? styles.disableHover : ""} 
-        ${isCurrentUserTurn && !isBidding && !isCardPlayPending ? styles.playableCard : ""}
+        ${isCurrentUserTurn && !isBidding && !pendingCard ? styles.playableCard : ""}
         ${isLastCard ? styles.lastCard : ""}
-        ${isPlayedCard ? styles.playedCard : ""}`}
+        `}
         style={{
           position: "absolute",
-          left: `${index * (cardWidth - overlap)}px`,
+          left: `${index * baseSpacing}px`,
+          bottom: "0px", // Keep all cards on the same baseline
           zIndex: index,
-          transform: "none",
+          transform: `rotate(${rotation}deg)`,
+          transformOrigin: "center bottom",
           margin: 0,
-          opacity: isCardPlayPending && !isPlayedCard ? 0.5 : 1,
-          transition: "opacity 0.2s ease-in-out",
+          opacity: 1,
+          transition: "all 0.2s ease-in-out",
+          '--card-rotation': `${rotation}deg`,
         }}
         onClick={
           !isDisabled && onCardClick
@@ -90,7 +109,7 @@ const PlayerCard = memo(
       >
         <div className={styles.fanCardValue}>{getCardValue(card.value)}</div>
         <div className={styles.fanCardSuit}>{getSuitSymbol(card.suit)}</div>
-        {isPlayedCard && (
+        {isPendingCard && (
           <div className={styles.cardPlayingIndicator}>
             <div className={styles.spinner}></div>
           </div>
@@ -209,28 +228,11 @@ const PlayerSeat = memo(
     onCardClick,
     isBidding,
     isCurrentUserTurn,
-    activeCardAnimation,
+    pendingCard,
     additionalClasses = {},
   }) => {
     const [showTrickWin, setShowTrickWin] = useState(false);
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [isCardPlayPending, setIsCardPlayPending] = useState(false);
-    const [playedCard, setPlayedCard] = useState(null);
-    const [showPlayingMessage, setShowPlayingMessage] = useState(false);
-    const [lastClickTime, setLastClickTime] = useState(0);
     const trickWinTimeoutRef = useRef(null);
-    const transitionTimeoutRef = useRef(null);
-    const cardPlayTimeoutRef = useRef(null);
-    const playingMessageTimeoutRef = useRef(null);
-
-    const effectDependencies = useMemo(
-      () => ({
-        isWinner,
-        isCurrentTurn,
-        isCurrentUserTurn,
-      }),
-      [isWinner, isCurrentTurn, isCurrentUserTurn]
-    );
 
     useEffect(() => {
       if (trickWinTimeoutRef.current) {
@@ -238,8 +240,7 @@ const PlayerSeat = memo(
         trickWinTimeoutRef.current = null;
       }
 
-      if (effectDependencies.isWinner) {
-        console.log("TTTTTTTTTTTT");
+      if (isWinner) {
         setShowTrickWin(true);
         trickWinTimeoutRef.current = setTimeout(() => {
           setShowTrickWin(false);
@@ -248,103 +249,51 @@ const PlayerSeat = memo(
         setShowTrickWin(false);
       }
 
-      if (effectDependencies.isCurrentTurn) {
-        setIsTransitioning(true);
-        if (transitionTimeoutRef.current) {
-          clearTimeout(transitionTimeoutRef.current);
-        }
-        transitionTimeoutRef.current = setTimeout(() => {
-          setIsTransitioning(false);
-        }, 150);
-      } else {
-        setIsTransitioning(false);
-      }
-
-      // Reset card play pending state when it's no longer the user's turn
-      if (!effectDependencies.isCurrentUserTurn) {
-        setIsCardPlayPending(false);
-        setPlayedCard(null);
-        setShowPlayingMessage(false);
-        setLastClickTime(0);
-        if (cardPlayTimeoutRef.current) {
-          clearTimeout(cardPlayTimeoutRef.current);
-          cardPlayTimeoutRef.current = null;
-        }
-        if (playingMessageTimeoutRef.current) {
-          clearTimeout(playingMessageTimeoutRef.current);
-          playingMessageTimeoutRef.current = null;
-        }
-      }
-
       return () => {
         if (trickWinTimeoutRef.current) {
           clearTimeout(trickWinTimeoutRef.current);
         }
-        if (transitionTimeoutRef.current) {
-          clearTimeout(transitionTimeoutRef.current);
-        }
-        if (cardPlayTimeoutRef.current) {
-          clearTimeout(cardPlayTimeoutRef.current);
-        }
-        if (playingMessageTimeoutRef.current) {
-          clearTimeout(playingMessageTimeoutRef.current);
-        }
       };
-    }, [effectDependencies]);
+    }, [isWinner]);
 
     const handleCardClick = useCallback(
       (card) => {
-        const currentTime = Date.now();
-        
-        // Prevent multiple card clicks when a play is already pending or rapid clicks within 500ms
-        if (!isBidding && isCurrentUserTurn && onCardClick && !isCardPlayPending && 
-            (currentTime - lastClickTime > 500)) {
-          
-          setLastClickTime(currentTime);
-          setIsCardPlayPending(true);
-          setPlayedCard(card);
-          setShowPlayingMessage(true);
-          
-          // Hide the message after 2 seconds
-          if (playingMessageTimeoutRef.current) {
-            clearTimeout(playingMessageTimeoutRef.current);
-          }
-          playingMessageTimeoutRef.current = setTimeout(() => {
-            setShowPlayingMessage(false);
-          }, 2000);
-          
-          // Set a shorter timeout to reset pending state if no response after 3 seconds
-          if (cardPlayTimeoutRef.current) {
-            clearTimeout(cardPlayTimeoutRef.current);
-          }
-          cardPlayTimeoutRef.current = setTimeout(() => {
-            console.warn('Card play timeout - resetting pending state');
-            setIsCardPlayPending(false);
-            setPlayedCard(null);
-            setShowPlayingMessage(false);
-          }, 3000); // Reduced from 10 seconds to 3 seconds
-          
-          requestAnimationFrame(() => {
-            onCardClick(card);
-          });
+        if (!isBidding && isCurrentUserTurn && onCardClick && !pendingCard) {
+          onCardClick(card);
         }
       },
-      [isBidding, isCurrentUserTurn, onCardClick, isCardPlayPending, lastClickTime]
+      [isBidding, isCurrentUserTurn, onCardClick, pendingCard]
     );
 
     const playerCardsSection = useMemo(() => {
       if (!isCurrentUser || cards.length === 0) return null;
 
-      const cardWidth = 50;
-      const overlap = 24;
+      // Responsive card sizing based on screen size
+      const getCardDimensions = () => {
+        if (window.innerWidth <= 360) {
+          return { cardWidth: 35, overlap: 15 };
+        } else if (window.innerWidth <= 480) {
+          return { cardWidth: 40, overlap: 18 };
+        } else if (window.innerWidth <= 576) {
+          return { cardWidth: 45, overlap: 20 };
+        } else if (window.innerWidth <= 768) {
+          return { cardWidth: 50, overlap: 22 };
+        } else {
+          return { cardWidth: 50, overlap: 20 };
+        }
+      };
+
+      const { cardWidth, overlap } = getCardDimensions();
       const totalWidth = cardWidth + (cards.length - 1) * (cardWidth - overlap);
+      const maxScreenWidth = window.innerWidth * 0.9; // 90% of screen width
+      const adjustedWidth = Math.min(totalWidth, maxScreenWidth);
 
       return (
         <div
-          className={styles.straightHand}
+          className={styles.fanHandUser}
           data-tutorial="player-hand"
           style={{
-            width: `${totalWidth}px`,
+            width: `${adjustedWidth}px`,
             position: "absolute",
             bottom: "100%",
             left: "50%",
@@ -367,20 +316,20 @@ const PlayerSeat = memo(
                 cardWidth={cardWidth}
                 overlap={overlap}
                 isLastCard={index === cards.length - 1}
-                isCardPlayPending={isCardPlayPending}
-                playedCard={playedCard}
+                pendingCard={pendingCard}
+                totalCards={cards.length}
               />
             );
           })}
         </div>
       );
-    }, [cards, isCurrentUser, isCurrentUserTurn, isBidding, handleCardClick, isCardPlayPending, playedCard]);
+    }, [cards, isCurrentUser, isCurrentUserTurn, isBidding, handleCardClick, pendingCard]);
 
     const seatClassNames = useMemo(() => {
       return `${styles.playerSeat} ${styles["playerSeat--edge"]} ${
         isCurrentTurn ? styles.turnIndicator : ""
-      } ${isTransitioning ? styles.transitioning : ""}`;
-    }, [isCurrentTurn, isTransitioning]);
+      }`;
+    }, [isCurrentTurn]);
 
     return (
       <div
@@ -392,15 +341,6 @@ const PlayerSeat = memo(
         data-pos={pos}
       >
         {showTrickWin && <TrickWinnerIndicator />}
-        
-        {showPlayingMessage && (
-          <div className={styles.playingMessageOverlay}>
-            <div className={styles.playingMessage}>
-              <div className={styles.playingSpinner}></div>
-              <span>Playing card...</span>
-            </div>
-          </div>
-        )}
 
         {playerCardsSection}
 
@@ -412,12 +352,7 @@ const PlayerSeat = memo(
           avatar={avatar}
           isCurrentTurn={isCurrentTurn}
           isCurrentUser={isCurrentUser}
-          additionalClasses={{
-            ...additionalClasses,
-            playerInfoBox: `${additionalClasses.playerInfoBox || ""} ${
-              isTransitioning ? styles.transitioning : ""
-            }`,
-          }}
+          additionalClasses={additionalClasses}
         />
 
         {!isCurrentUser && cards.length > 0 && <AICards cards={cards} />}
@@ -438,8 +373,7 @@ const PlayerSeat = memo(
       prevProps.bid === nextProps.bid &&
       prevProps.tricks === nextProps.tricks &&
       prevProps.cards.length === nextProps.cards.length &&
-      prevProps.activeCardAnimation?.card ===
-        nextProps.activeCardAnimation?.card
+      prevProps.pendingCard === nextProps.pendingCard
     );
   }
 );
