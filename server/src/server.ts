@@ -15,24 +15,31 @@ app.use(morgan('dev', {
   }
 }));
 
-// const io = new Server(httpServer, {
-//   cors: {
-//     origin: "http://localhost:3000", // Frontend URL
-//     methods: ["GET", "POST"],
-//   },
-// });
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*", // Allow connections from any origin
+    methods: ["GET", "POST"],
+  },
+});
 
 app.use(cors());
 app.use(express.json());
 
 
 // Game routes
+
+app.get('/',(req,res)=>{
+  res.send('Welcome to the Card Game API');
+})
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.post('/api/game/create', (req, res) => {
   try {
-    const { playerName } = req.body;
-    // TODO: chane static number of rounds
-    const game = gameService.createGameWithAI(5, playerName);
-    // logger.info(JSON.stringify(game, null, 2));
+    const { playerName, playerCount = 3, roundCount = 6 } = req.body;
+    const game = gameService.createGameWithAI(playerCount, playerName, roundCount);
     res.json(game);
   } catch (error) {
     logger.error('Error creating game:', error);
@@ -40,12 +47,14 @@ app.post('/api/game/create', (req, res) => {
   }
 });
 
+// API endpoint for playing a card - will be migrated to WebSockets
 app.post('/api/game/:gameId/play', (req, res) => {
   try {
     const { gameId } = req.params;
     const { card } = req.body;
     gameService.playCard(gameId, 'player-1', card);
-    gameService.playAITurns(gameId);
+    // No longer immediately play AI turns
+    // Simply return the game state after player's move
     const gameState = gameService.getGameState(gameId);
     res.json(gameState);
   } catch (error) {
@@ -54,12 +63,14 @@ app.post('/api/game/:gameId/play', (req, res) => {
   }
 });
 
+// API endpoint for placing a bid - will be migrated to WebSockets
 app.post('/api/game/:gameId/bid', (req, res) => {
   try {
     const { gameId } = req.params;
     const { bid } = req.body;
     gameService.placeBid(gameId, 'player-1', bid);
-    gameService.playAITurns(gameId);
+    // No longer immediately play AI turns
+    // Simply return the game state after player's bid
     const gameState = gameService.getGameState(gameId)
     res.json(gameState);
   } catch (error) {
@@ -68,7 +79,8 @@ app.post('/api/game/:gameId/bid', (req, res) => {
   }
 });
 
-// new WebSocketHandler(io);
+// Initialize WebSocket handler
+new WebSocketHandler(io, gameService);
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {

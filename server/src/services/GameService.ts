@@ -3,27 +3,58 @@ import logger from "../utils/logger";
 import { AIPlayerService } from "./AIPlayerService";
 import { CardService } from "./CardService";
 import { GameValidator } from "../utils/validators";
+import { EventEmitter } from 'events';
 
 export class GameService {
   private games: Map<string, Game>;
   private cardService: CardService;
   private aiService: AIPlayerService;
+  public events: EventEmitter;
 
   constructor() {
     this.games = new Map();
     this.cardService = new CardService();
     this.aiService = new AIPlayerService();
+    this.events = new EventEmitter();
   }
 
-  createGameWithAI(totalRounds: number, playerName: string): Game {
+  createGameWithAI(
+    playerCount: number,
+    playerName: string,
+    roundCount: number = 6
+  ): Game {
     logger.info("-----------------createGameWithAI()-----------------");
-    const game = this.createGame(totalRounds);
+    // Ensure valid player counts (3-8 players total including human)
+    if (playerCount < 3 || playerCount > 8) {
+      throw new Error("Player count must be between 3 and 8");
+    }
+
+    const aiPlayerCount = playerCount - 1; // Subtract 1 for human player
+
+    // Calculate min and max rounds based on player count
+    const minRounds = 6;
+    const maxRounds = Math.floor((52 / playerCount) * 2 - 1);
+
+    // Validate round count is within appropriate range
+    if (roundCount < minRounds) {
+      logger.info(
+        `Round count ${roundCount} is less than minimum ${minRounds}, setting to minimum`
+      );
+      roundCount = minRounds;
+    } else if (roundCount > maxRounds) {
+      logger.info(
+        `Round count ${roundCount} exceeds maximum ${maxRounds} for ${playerCount} players, setting to maximum`
+      );
+      roundCount = maxRounds;
+    }
+
+    const game = this.createGame(roundCount);
 
     // Add human player with fixed ID
     this.addPlayer(game.id, playerName, "player-1");
 
-    // Add AI players
-    for (let i = 1; i <= 3; i++) {
+    // Add AI players dynamically based on playerCount
+    for (let i = 1; i <= aiPlayerCount; i++) {
       this.addAIPlayer(game.id, `AI Player ${i}`);
     }
 
@@ -61,71 +92,6 @@ export class GameService {
     this.startRound(gameId);
   }
 
-  playAITurns(gameId: string) {
-    logger.info("-----------------playAITurns()-----------------");
-    const game = this.getGame(gameId);
-    if (!game) throw new Error("Game not found");
-    // let maxTurns = game.players.length; // Safety counter
-
-    while (true) {
-      const currentPlayer = game.players.find((p) => p.id === game.currentTurn);
-      if (!currentPlayer?.isAI || game.turnCount >= game.players.length) break;
-
-      // const currentPlayer = game.players.find((p) => p.id === game.currentTurn);
-      // if (!currentPlayer?.isAI) break;
-
-      try {
-        if (game.status === "BIDDING") {
-          // Gather previous bids in order
-          const previousBids = game.players
-            .slice(0, game.turnCount)
-            .map((p) => typeof p.currentBid === 'number' && p.currentBid >= 0 ? p.currentBid : 0);
-          const isLastBidder = game.turnCount === game.players.length - 1;
-          const bid = this.aiService.calculateBid(
-            currentPlayer.cards,
-            game.trumpSuit,
-            game.currentRound,
-            previousBids,
-            isLastBidder
-          );
-          logger.info(`AI ${currentPlayer.name} bids ${bid}`);
-          currentPlayer.currentBid = bid;
-          game.turnCount++;
-
-          if (game.turnCount === game.players.length) {
-            game.status = "PLAYING";
-            game.turnCount = 0;
-            logger.info("111111111Bidding complete, moving to PLAYING phase");
-            // Do NOT return here, let the API handler return the updated game state
-            
-          }
-          this.moveToNextTurn(gameId);
-        } else if (game.status === "PLAYING") {
-          logger.info(`AI Player ${currentPlayer.name} is playing a card`);
-          const card = this.aiService.selectCard(
-            currentPlayer.cards,
-            game.currentTrick || [],
-            game.trumpSuit,
-            game.currentSuit
-          );
-          logger.info(
-            `AI Player ${currentPlayer.name} plays ${card.value} of ${card.suit}`
-          );
-          this.playCard(gameId, currentPlayer.id, card);
-
-          // if (this.isTrickComplete(game)) {
-          //   logger.info("Trick complete, evaluating trick");
-          //   this.evaluateTrick(gameId);
-          // } else {
-          //   this.moveToNextTurn(gameId);
-          // }
-        }
-      } catch (error) {
-        logger.error(`AI Player ${currentPlayer.name} error:`, error);
-        break;
-      }
-    }
-  }
   private findWinningCard(trick: any[], trumpSuit: Suit, leadSuit: Suit): any {
     // If trick is empty, return null
     if (!trick.length) return null;
@@ -157,31 +123,46 @@ export class GameService {
     const game = this.getGame(gameId);
     if (!game || !game.currentTrick) return;
 
+    // Set flag to indicate trick evaluation is in progress
+    game.trickEvaluationInProgress = true;
+
     const winningCard = this.findWinningCard(
       game.currentTrick,
       game.trumpSuit,
       game.currentTrick[0].suit
     );
 
-    // logger.info("77777777777777777");
-    // logger.info(JSON.stringify(winningCard));
-
     const winningPlayer = game.players.find(
       (p) => p.id === winningCard.playedBy
     );
 
-    // logger.info(JSON.stringify(winningPlayer, null, 2));
+    logger.info("Winning player: ");
+    logger.info(JSON.stringify(winningPlayer));
     if (winningPlayer) {
       winningPlayer.tricks = (winningPlayer.tricks || 0) + 1;
-      game.currentTurn = winningPlayer.id;
+      game.trickWinner = winningPlayer.id; // Set trick winner for animation
     }
 
-    game.currentTrick = [];
-    game.currentSuit = undefined;
+    setTimeout(() => {
+      game.currentTrick = [];
+      game.currentSuit = undefined;
+      
+      // Reset flag after trick evaluation is complete
+      game.trickEvaluationInProgress = false;
+      logger.info("Trick evaluation complete, moving to next turn");
+            // Only set currentTurn if round is NOT complete
+      if (!this.isRoundComplete(game) && winningPlayer) {
+        game.currentTurn = winningPlayer.id;
+      }
 
-    if (this.isRoundComplete(game)) {
-      this.completeRound(gameId);
-    }
+      if (this.isRoundComplete(game)) {
+        this.completeRound(gameId);
+      }
+
+      // Emit event that game state needs to be sent to clients and AI turns need to be rescheduled
+      this.events.emit('gameStateUpdated', gameId);
+    }, 2000); // 2 second delay
+    logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
   }
 
   private isRoundComplete(game: Game): boolean {
@@ -193,69 +174,82 @@ export class GameService {
     const game = this.getGame(gameId);
     if (!game) return;
 
+    // Set round finished flag for animation
+    game.roundFinished = true;
+
+    // Store previous scores before updating
+    game.players.forEach((player) => {
+      player.prevScore = player.score;
+    });
+
     // Score the round
     game.players.forEach((player) => {
       if (player.tricks === player.currentBid) {
         player.score += 10 + player.tricks;
       }
       player.tricks = 0;
-      player.currentBid = 0;
+      player.currentBid = -1;
     });
 
-    if (game.currentRound < game.totalRounds) {
-      game.currentRound++;
-      game.status = "BIDDING";
-      this.startRound(gameId);
-    } else {
-      // Find winner
-      const winner = game.players.reduce((prev, current) =>
-        prev.score > current.score ? prev : current
-      );
+    game.currentRound++;
 
-      game.winner = winner;
+    if (game.currentRound > game.totalRounds) {
+      // Game is finished - set appropriate state
+      logger.info("Game completed! Setting status to FINISHED");
       game.status = "FINISHED";
+      const winner = this.determineWinner(game);
+      game.winner = winner;
 
-      // Reset for potential new game
+      // Reset any in-progress game state for cleanliness
       game.currentTrick = [];
       game.currentSuit = undefined;
-      game.currentTurn = "";
+      game.turnCount = 0;
+
+      // Log winner information
+      logger.info(`Game winner: ${winner.name} with score ${winner.score}`);
+      return;
     }
+
+    // Set trickStartingPlayer to track who will start the next round
+    const currentPlayerIndex = game.players.findIndex(
+      (p) => p.id === game.currentTurn
+    );
+    const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length;
+    game.currentTurn = game.players[nextPlayerIndex].id;
+    game.trickStartingPlayer = game.currentTurn;
+
+    this.startRound(gameId);
   }
 
   private moveToNextTurn(gameId: string): void {
     logger.info("-----------------moveToNextTurn()-----------------");
     const game = this.getGame(gameId);
     if (!game) throw new Error("Game not found");
-    // logger.info(JSON.stringify(game, null, 2));
-    // Add safety check for infinite loop
+    if (game.status === "FINISHED") return;
     if (game.players.length === 0) return;
 
-    const currentIndex = game.players.findIndex(
-      (p) => p.id === game.currentTurn
-    );
+    let currentIndex = game.players.findIndex((p) => p.id === game.currentTurn);
     if (currentIndex === -1) {
       game.currentTurn = game.players[0].id;
-      return;
+      currentIndex = 0;
     }
 
-    const nextIndex = (currentIndex + 1) % game.players.length;
-    game.currentTurn = game.players[nextIndex].id;
-
-    // Minimize logging
-    logger.info(`Turn moved from player ${currentIndex} to ${nextIndex}`);
-  }
-
-  private isBiddingComplete(game: Game): boolean {
-    logger.info("-----------------isBiddingComplete()-----------------");
-    const allBidsValid = game.players.every(
-      (p) => typeof p.currentBid === "number" && p.currentBid >= 0
-    );
-    logger.info(
-      `Checking bids: ${game.players
-        .map((p) => `${p.name}: ${p.currentBid}`)
-        .join(", ")}`
-    );
-    return allBidsValid;
+    // Find the next player with cards left
+    let nextIndex = (currentIndex + 1) % game.players.length;
+    let looped = false;
+    while (game.players[nextIndex].cards.length === 0) {
+      nextIndex = (nextIndex + 1) % game.players.length;
+      if (nextIndex === currentIndex) {
+        looped = true;
+        break;
+      }
+    }
+    if (!looped) {
+      game.currentTurn = game.players[nextIndex].id;
+      logger.info(`Turn moved from player ${currentIndex} to ${nextIndex}`);
+    } else {
+      logger.info("No players with cards left to move turn to.");
+    }
   }
 
   private isTrickComplete(game: Game): boolean {
@@ -276,7 +270,10 @@ export class GameService {
     logger.info("-----------------addPlayer()-----------------");
     const game = this.getGame(gameId);
     if (!game) throw new Error("Game not found");
-    if (game.players.length >= 4) throw new Error("Game is full");
+
+    // Remove the limitation on 4 players
+    // We now dynamically handle player counts from 3-8 in createGameWithAI
+
     if (game.players.some((p) => p.name === playerName))
       throw new Error("Player name taken");
 
@@ -321,35 +318,46 @@ export class GameService {
     game.currentTrick = [];
     game.currentSuit = undefined;
     game.turnCount = 0;
+    game.trickWinner = undefined; // Clear trick winner when starting new round
 
     // Reset player round-specific fields
     game.players.forEach((player) => {
       player.tricks = 0;
       player.currentBid = -1;
     });
-    
+
     game.trumpSuit = this.getTrumpSuitForRound(game.currentRound);
 
     this.cardService.shuffle();
-    
-    // Get the appropriate number of cards for this round
-    const cardsForThisRound = this.getCardsForRound(game.currentRound, game.totalRounds);
-    
-    logger.info(`Round ${game.currentRound}/${game.totalRounds}: Dealing ${cardsForThisRound} cards per player`);
-    
+
+    const cardsForThisRound = Math.min(
+      game.currentRound,
+      Math.floor(52 / game.players.length)
+    );
+
+    logger.info(
+      `Round ${game.currentRound}/${game.totalRounds}: Dealing ${cardsForThisRound} cards per player`
+    );
+
+    logger.info("111111111111111111111")
     const hands = this.cardService.dealCards(
       game.players.length,
       cardsForThisRound
     );
-    
+    logger.info("2222222222222222222222222")
+
     game.players.forEach((player, index) => {
       player.cards = hands[index];
     });
+    logger.info("333333333333333333")
 
     const openerIndex = (game.currentRound - 1) % game.players.length;
     game.currentTurn = game.players[openerIndex].id;
-    
+    logger.info("444444444444444444444")
+
     game.status = "BIDDING";
+    logger.info("5555555555555555555")
+
   }
 
   getGameState(gameId: string) {
@@ -380,13 +388,19 @@ export class GameService {
     if (isLastBidder) {
       // Calculate sum of all previous bids
       const sumOfPreviousBids = game.players.reduce((sum, p) => {
-        if (p.id !== playerId && typeof p.currentBid === 'number' && p.currentBid >= 0) {
+        if (
+          p.id !== playerId &&
+          typeof p.currentBid === "number" &&
+          p.currentBid >= 0
+        ) {
           return sum + p.currentBid;
         }
         return sum;
       }, 0);
       if (sumOfPreviousBids + bid === game.currentRound) {
-        throw new Error("Last player cannot make a bid that would make the total equal to the number of cards in the round");
+        throw new Error(
+          "Last player cannot make a bid that would make the total equal to the number of cards in the round"
+        );
       }
     }
     player.currentBid = bid;
@@ -398,7 +412,7 @@ export class GameService {
     if (game.turnCount === game.players.length) {
       game.status = "PLAYING";
       game.turnCount = 0;
-      logger.info("222222222222222Bidding complete, moving to PLAYING phase");
+      logger.info("Bidding complete, moving to PLAYING phase");
       // Do NOT return here, let the API handler return the updated game state
     }
 
@@ -413,51 +427,171 @@ export class GameService {
     const player = game.players.find((p) => p.id === playerId);
     if (!player) throw new Error("Player not found");
 
+    if (game.currentTurn !== playerId) {
+      throw new Error("Not your turn");
+    }
+
+    if (game.status !== "PLAYING") {
+      throw new Error("Game is not in playing phase");
+    }
+
+    if (player.cards.length === 0) {
+      throw new Error("No cards left to play");
+    }
+
     // Use GameValidator for card play validation
     if (!GameValidator.canPlayCard(game, player, card)) {
       throw new Error("Invalid card play");
     }
 
+    // Find matching card in player's hand
     const cardIndex = player.cards.findIndex(
       (c) => c.suit === card.suit && c.value === card.value
     );
     if (cardIndex === -1) throw new Error("Card not found in player hand");
+
+    // Add card to trick
+    const trickCard = {
+      ...player.cards[cardIndex],
+      playedBy: playerId,
+    };
+
+    // Check if this is the first card in the trick
+    if (!game.currentTrick || game.currentTrick.length === 0) {
+      game.currentSuit = trickCard.suit;
+      game.trickStartingPlayer = playerId; // Track who started this trick
+    }
+
+    // Remove from player's hand
     player.cards.splice(cardIndex, 1);
 
-    game.currentTrick = game.currentTrick || [];
-    game.currentTrick.push({
-      ...card,
-      playedBy: playerId,
-    });
+    logger.info(
+      `Player ${player.name} played card: ${trickCard.value} of ${trickCard.suit}`
+    );
+    // Add to trick
+    if (!game.currentTrick) {
+      game.currentTrick = [];
+    }
+    game.currentTrick.push(trickCard);
     game.turnCount++;
 
+    // Check if trick is complete
     if (game.turnCount === game.players.length) {
       this.evaluateTrick(gameId);
+      logger.info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
       game.turnCount = 0;
     } else {
       this.moveToNextTurn(gameId);
     }
-    if (this.isRoundComplete(game)) {
-      this.completeRound(gameId)
+  }
+
+  playAISingleTurn(gameId: string, playerId: string): void {
+    logger.info("-----------------playAISingleTurn()-----------------");
+    const game = this.getGame(gameId);
+    if (!game) throw new Error("Game not found");
+
+    const currentPlayer = game.players.find((p) => p.id === playerId);
+    if (!currentPlayer || !currentPlayer.isAI) {
+      throw new Error("Not an AI player's turn");
+    }
+    
+    // Don't proceed if trick evaluation is in progress
+    if (game.trickEvaluationInProgress) {
+      logger.info(`Skipping AI turn for ${currentPlayer.name} - trick evaluation in progress`);
+      return;
+    }
+
+    if (game.status === "PLAYING") {
+      logger.info(`AI Player ${currentPlayer.name} is playing a card`);
+
+      // AI selects card
+      const card = this.aiService.selectCard(
+        currentPlayer.cards,
+        game.currentTrick || [],
+        game.trumpSuit,
+        game.currentSuit
+      );
+
+      logger.info(
+        `AI Player ${currentPlayer.name} plays ${card.value} of ${card.suit}`
+      );
+
+      // Clear trick winner for a clean animation
+      game.trickWinner = undefined;
+
+      // Play the card
+      this.playCard(gameId, currentPlayer.id, card);
+
+      // Capture the winning player's ID for animation
+      if (this.isTrickComplete(game)) {
+        const trick = game.currentTrick || [];
+        const winningCard = this.findWinningCard(
+          trick,
+          game.trumpSuit,
+          trick[0]?.suit
+        );
+
+        if (winningCard) {
+          game.trickWinner = winningCard.playedBy;
+        }
+      }
     }
   }
 
-  private getCardsForRound(currentRound: number, totalRounds: number): number {
-    const MAX_CARDS = 13; // Maximum cards per player in any round
-    
-    // Calculate midpoint where cards should start decreasing
-    const midpoint = Math.min(MAX_CARDS, Math.ceil(totalRounds / 2));
-    
-    if (currentRound <= midpoint) {
-      // First half: ascending (1, 2, 3, ..., up to MAX_CARDS)
-      return currentRound;
-    } else if (currentRound <= totalRounds - midpoint + 1) {
-      // Middle section (if totalRounds > 2*MAX_CARDS): stay at MAX_CARDS
-      return MAX_CARDS;
-    } else {
-      // Final descending section
-      const stepsFromEnd = totalRounds - currentRound + 1;
-      return stepsFromEnd;
+  placeAISingleBid(gameId: string, playerId: string): void {
+    logger.info("-----------------placeAISingleBid()-----------------");
+    const game = this.getGame(gameId);
+    if (!game) throw new Error("Game not found");
+
+    const currentPlayer = game.players.find((p) => p.id === playerId);
+    if (!currentPlayer || !currentPlayer.isAI) {
+      throw new Error("Not an AI player's turn");
     }
+
+    // Don't proceed if trick evaluation is in progress
+    if (game.trickEvaluationInProgress) {
+      logger.info(`Skipping AI bid for ${currentPlayer.name} - trick evaluation in progress`);
+      return;
+    }
+
+    if (game.status === "BIDDING") {
+      // Gather previous bids in order
+      const previousBids = game.players
+        .slice(0, game.turnCount)
+        .map((p) =>
+          typeof p.currentBid === "number" && p.currentBid >= 0
+            ? p.currentBid
+            : 0
+        );
+
+      const isLastBidder = game.turnCount === game.players.length - 1;
+      const bid = this.aiService.calculateBid(
+        currentPlayer.cards,
+        game.trumpSuit,
+        game.currentRound,
+        previousBids,
+        isLastBidder
+      );
+
+      logger.info(`AI ${currentPlayer.name} bids ${bid}`);
+      currentPlayer.currentBid = bid;
+      game.turnCount++;
+
+      if (game.turnCount === game.players.length) {
+        game.status = "PLAYING";
+        game.turnCount = 0;
+        game.roundFinished = false;
+        logger.info("Bidding complete, moving to PLAYING phase");
+      }
+
+      this.moveToNextTurn(gameId);
+    }
+  }
+
+  private determineWinner(game: Game): Player {
+    // Find player with highest score
+    return game.players.reduce((prev, current) =>
+      prev.score > current.score ? prev : current
+    );
   }
 }
