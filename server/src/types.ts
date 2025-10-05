@@ -16,6 +16,7 @@ export enum Suit {
     cards: Card[];
     currentBid: number;
     score: number;
+    prevScore?: number;
     isHost?: boolean;
     isAI?: boolean;
     tricks?: number;
@@ -34,6 +35,10 @@ export enum Suit {
     currentSuit?: Suit;
     winner?: Player;
     turnCount: number;
+    trickWinner?: string;
+    roundFinished?: boolean;
+    trickStartingPlayer?: string;
+    trickEvaluationInProgress?: boolean;
   }
 
   export interface TrickCard {

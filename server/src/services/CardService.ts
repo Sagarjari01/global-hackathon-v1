@@ -1,14 +1,17 @@
 import { Card } from '../types';
 import { CardModel } from '../models/Card';
+import logger from '../utils/logger';
 
 export class CardService {
   private deck: Card[];
 
   constructor() {
-    this.deck = CardModel.createDeck();
+    this.deck = [];
   }
 
   shuffle(): void {
+    // Always create a fresh deck for each round
+    this.deck = CardModel.createDeck();
     for (let i = this.deck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];

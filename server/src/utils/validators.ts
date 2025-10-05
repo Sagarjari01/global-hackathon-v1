@@ -3,21 +3,16 @@ import logger from './logger';
 
 export class GameValidator {
   static canPlayCard(game: Game, player: Player, card: Card): boolean {
-    logger.info("canPlayCard")
-    logger.info("111111111111111")
+    logger.info("-----------canPlayCard-----------")
     if (game.status !== "PLAYING") return false;
-    logger.info("2222222222222222")
     if (game.currentTurn !== player.id) return false;
-    logger.info("3333333333333333")
     if (!player.cards.some(c => c.suit === card.suit && c.value === card.value)) return false;
-    logger.info("4444444444444444")
     // Its working perfect
     if (game.currentTrick && game.currentTrick.length > 0) {
       const leadSuit = game.currentTrick[0].suit;
       const hasLeadSuit = player.cards.some(c => c.suit === leadSuit);
       if (hasLeadSuit && card.suit !== leadSuit) return false;
     }
-    logger.info("6666666666666666")
     return true;
   }
 
