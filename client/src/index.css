@@ -5,50 +5,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  -webkit-tap-highlight-color: transparent;
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-}
-
-html {
-  height: 100%;
-  width: 100%;
-}
-
-#root {
-  height: 100%;
-  width: 100%;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
-}
-
-/* Reset styles to prevent overflow */
-* {
-  box-sizing: border-box;
-  touch-action: manipulation;
-}
-
-@media (max-width: 768px) {
-  input, button {
-    font-size: 16px !important; /* Prevents zoom on iOS */
-  }
-}
-
-/* Improve accessibility */
-:focus {
-  outline: 2px solid #4a90e2;
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-:focus-visible {
-  outline: 2px solid #4a90e2;
-  outline-offset: 2px;
 }

@@ -15,12 +15,12 @@ app.use(morgan('dev', {
   }
 }));
 
-const io = new Server(httpServer, {
-  cors: {
-    origin: "*", // Allow connections from any origin
-    methods: ["GET", "POST"],
-  },
-});
+// const io = new Server(httpServer, {
+//   cors: {
+//     origin: "http://localhost:3000", // Frontend URL
+//     methods: ["GET", "POST"],
+//   },
+// });
 
 app.use(cors());
 app.use(express.json());
@@ -29,8 +29,10 @@ app.use(express.json());
 // Game routes
 app.post('/api/game/create', (req, res) => {
   try {
-    const { playerName, playerCount = 3, roundCount = 6 } = req.body;
-    const game = gameService.createGameWithAI(playerCount, playerName, roundCount);
+    const { playerName } = req.body;
+    // TODO: chane static number of rounds
+    const game = gameService.createGameWithAI(5, playerName);
+    // logger.info(JSON.stringify(game, null, 2));
     res.json(game);
   } catch (error) {
     logger.error('Error creating game:', error);
@@ -38,14 +40,12 @@ app.post('/api/game/create', (req, res) => {
   }
 });
 
-// API endpoint for playing a card - will be migrated to WebSockets
 app.post('/api/game/:gameId/play', (req, res) => {
   try {
     const { gameId } = req.params;
     const { card } = req.body;
     gameService.playCard(gameId, 'player-1', card);
-    // No longer immediately play AI turns
-    // Simply return the game state after player's move
+    gameService.playAITurns(gameId);
     const gameState = gameService.getGameState(gameId);
     res.json(gameState);
   } catch (error) {
@@ -54,14 +54,12 @@ app.post('/api/game/:gameId/play', (req, res) => {
   }
 });
 
-// API endpoint for placing a bid - will be migrated to WebSockets
 app.post('/api/game/:gameId/bid', (req, res) => {
   try {
     const { gameId } = req.params;
     const { bid } = req.body;
     gameService.placeBid(gameId, 'player-1', bid);
-    // No longer immediately play AI turns
-    // Simply return the game state after player's bid
+    gameService.playAITurns(gameId);
     const gameState = gameService.getGameState(gameId)
     res.json(gameState);
   } catch (error) {
@@ -70,8 +68,7 @@ app.post('/api/game/:gameId/bid', (req, res) => {
   }
 });
 
-// Initialize WebSocket handler
-new WebSocketHandler(io, gameService);
+// new WebSocketHandler(io);
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {

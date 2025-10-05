@@ -15,8 +15,8 @@ module.exports = {
       }, {
         name   : "judgment-server-prod",
         script : "./dist/server.js", // Point to compiled js
-        instances: 1,
-        exec_mode: "fork",
+        instances: "max",
+        exec_mode: "cluster",
         env_production: { 
           NODE_ENV: "production",
           PORT: 3000 
