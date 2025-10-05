@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Table } from '../RevampedGame';
-import { avatars } from '../RevampedGame/avatars';
+import { Table } from '../../game/ui';
+import { avatars } from '../../game/ui/avatars';
 import TutorialOverlay from './TutorialOverlay';
 import styles from './Tutorial.module.css';
 

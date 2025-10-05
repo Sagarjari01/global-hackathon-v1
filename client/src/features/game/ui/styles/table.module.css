@@ -1,0 +1,310 @@
+/* Poker Table Styles */
+.tableContainer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(
+      ellipse at 30% 20%,
+      rgba(25, 35, 60, 0.8) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%,
+      rgba(35, 25, 50, 0.6) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      135deg,
+      #1a1a2e 0%,
+      #16213e 25%,
+      #0f1419 50%,
+      #1e2a4a 75%,
+      #16213e 100%
+    );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.pokerTable {
+  position: relative;
+  width: 80vw;
+  max-width: 900px;
+  height: 60vw;
+  max-height: 500px;
+  background: radial-gradient(
+    ellipse at center,
+    #0d5929 0%,
+    #0a4d24 40%,
+    #08421f 70%,
+    #06371a 100%
+  );
+  border: 20px solid transparent;
+  border-radius: 250px;
+  background-clip: padding-box;
+  box-shadow: 0 20px 80px 0 rgba(0, 0, 0, 0.8),
+    0 2px 0 rgba(255, 255, 255, 0.08) inset,
+    0 0 20px 3px rgba(13, 89, 41, 0.6) inset,
+    0 -5px 15px rgba(0, 0, 0, 0.3) inset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Premium mahogany wooden border with rich depth */
+.pokerTable::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  background: linear-gradient(
+    135deg,
+    /* Rich highlight - premium wood finish */ #d2691e 0%,
+    #cd853f 5%,
+    #b8860b 10%,
+    /* Main mahogany body */ #8b4513 20%,
+    #a0522d 30%,
+    #8b4513 40%,
+    #654321 55%,
+    /* Deep rich wood tones */ #4a2c2a 70%,
+    #3e1a14 85%,
+    #2f1b14 95%,
+    #1a0f0a 100%
+  );
+  border-radius: 250px;
+  z-index: -1;
+  box-shadow: /* Premium beveled edge */ 0 -3px 10px rgba(210, 105, 30, 0.5)
+      inset,
+    0 3px 10px rgba(26, 15, 10, 0.8) inset,
+    /* Luxury outer glow */ 0 0 40px rgba(139, 69, 19, 0.4),
+    0 0 80px rgba(205, 133, 63, 0.2),
+    /* Deep table shadow */ 0 30px 100px rgba(0, 0, 0, 0.9);
+}
+
+/* Enhanced wood grain with luxury finish */
+.pokerTable::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  right: -20px;
+  bottom: -20px;
+  background: /* Premium wood grain pattern */ repeating-linear-gradient(
+      88deg,
+      transparent 0px,
+      rgba(139, 69, 19, 0.15) 0.5px,
+      rgba(160, 82, 45, 0.12) 1px,
+      transparent 1.5px,
+      transparent 5px,
+      rgba(205, 133, 63, 0.08) 5.5px,
+      transparent 6px,
+      transparent 12px
+    ),
+    /* Cross grain for authenticity */
+      repeating-linear-gradient(
+        -2deg,
+        transparent 0px,
+        rgba(74, 44, 42, 0.1) 0.3px,
+        transparent 0.8px,
+        transparent 3px
+      ),
+    /* Wood knots and character marks */
+      radial-gradient(
+        ellipse 15px 5px at 25% 20%,
+        rgba(47, 27, 20, 0.6) 0%,
+        transparent 70%
+      ),
+    radial-gradient(
+      ellipse 12px 4px at 75% 75%,
+      rgba(62, 26, 20, 0.5) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 10px 6px at 60% 40%,
+      rgba(26, 15, 10, 0.4) 0%,
+      transparent 70%
+    ),
+    /* Subtle wood texture overlay */
+      linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(210, 105, 30, 0.03) 25%,
+        transparent 50%,
+        rgba(139, 69, 19, 0.05) 75%,
+        transparent 100%
+      );
+  border-radius: 250px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Wooden border with realistic lighting */
+.pokerTable::before {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: -16px;
+  right: -16px;
+  bottom: -16px;
+  background: linear-gradient(
+    180deg,
+    /* Top highlight - light reflection on wood */ #e5c4a0 0%,
+    #dbb896 3%,
+    #d1ae8c 8%,
+    /* Main wood color - your requested color */ #cdaa7d 15%,
+    #c4a174 25%,
+    #bb986b 35%,
+    #b28f62 50%,
+    #a98659 65%,
+    /* Bottom deep wood shadow */ #9d7a50 80%,
+    #8a6b47 90%,
+    #6d5439 100%
+  );
+  border-radius: 250px;
+  z-index: -1;
+  box-shadow: /* Top light reflection - warmer tone */ 0 -4px 12px
+      rgba(229, 196, 160, 0.5) inset,
+    /* Mid highlight for dimension */ 0 -8px 20px rgba(205, 170, 125, 0.3) inset,
+    /* Bottom deep shadow */ 0 12px 24px rgba(109, 84, 57, 0.8) inset,
+    /* Outer warm glow */ 0 0 40px rgba(205, 170, 125, 0.4),
+    /* Table drop shadow */ 0 25px 80px rgba(0, 0, 0, 0.9);
+}
+
+/* Wood grain texture overlay */
+.pokerTable::after {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: -16px;
+  right: -16px;
+  bottom: -16px;
+  background: /* Horizontal wood grain lines */ repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(62, 39, 35, 0.15) 0.5px,
+      rgba(47, 27, 20, 0.25) 1px,
+      transparent 1.5px,
+      transparent 6px,
+      rgba(139, 111, 71, 0.08) 6.5px,
+      transparent 7px,
+      transparent 12px
+    ),
+    /* Vertical wood texture */
+      repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        rgba(93, 64, 55, 0.1) 0.3px,
+        rgba(74, 44, 42, 0.15) 0.8px,
+        transparent 1.2px,
+        transparent 3px
+      ),
+    /* Wood knots and imperfections */
+      radial-gradient(
+        ellipse 20px 8px at 25% 30%,
+        rgba(47, 27, 20, 0.4) 0%,
+        transparent 70%
+      ),
+    radial-gradient(
+      ellipse 15px 6px at 75% 70%,
+      rgba(62, 39, 35, 0.3) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 18px 7px at 60% 15%,
+      rgba(31, 15, 10, 0.35) 0%,
+      transparent 70%
+    );
+  border-radius: 250px;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.centerArea {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  gap: 1vw;
+}
+
+/* Game Header */
+.gameHeaderContainer {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
+}
+
+.gameHeader {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gameFinishedHeader {
+  background: linear-gradient(135deg, #6a3093, #a044ff);
+  animation: pulseHeader 2s infinite;
+}
+
+.gameFinished {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+}
+
+.gameFinishedEmoji {
+  font-size: 1.5rem;
+}
+
+.roundInfoBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.roundNumber {
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
+.gamePhase {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Trump Suit Display */
+.trumpSuitBox {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin-left: 10px;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redSuit {
+  color: #d40000;
+}

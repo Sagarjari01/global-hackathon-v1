@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import bgmFile from '../assets/BGM.mp3';
+import bgmFile from '../../../assets/BGM.mp3';
 import styles from './AudioPlayer.module.css';
 
 const AudioPlayer = () => {

@@ -50,7 +50,7 @@ const TutorialOverlay = ({
     const updateHighlightedElement = () => {
       // Map highlight identifiers to actual selectors - using attribute selectors for CSS modules
       const selectorMap = {
-        'gameHeader': '[class*="gameHeader"]',
+        'gameHeader': '[class*="gameHeader"]:not([class*="gameHeaderContainer"])',
         'biddingControls': '[class*="biddingCenter"], [class*="biddingControls"]',
         'currentPlayer': '[class*="turnIndicator"], [class*="currentPlayer"]',
         'currentPlayerHand': '[data-tutorial="player-hand"], [class*="straightHand"], [class*="playerCards"]',

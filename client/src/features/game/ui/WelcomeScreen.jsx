@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import styles from '../RevampedWelcome.module.css';
+import styles from './Welcome.module.css';
 
 const WelcomeScreen = ({ onStartGame, onStartTutorial }) => {
+  const MAX_NAME_LENGTH = 16;
   const [playerName, setPlayerName] = useState('');
   const [playerCount, setPlayerCount] = useState(3);
   const [roundCount, setRoundCount] = useState(6);
@@ -33,7 +34,7 @@ const WelcomeScreen = ({ onStartGame, onStartTutorial }) => {
   const getMaxRounds = useCallback(() => Math.floor(((52 / playerCount) * 2) - 1), [playerCount]);
 
   const handleNameChange = (e) => {
-    const value = e.target.value;
+    const value = e.target.value.slice(0, MAX_NAME_LENGTH);
     setPlayerName(value);
     setIsNameValid(value.trim().length > 0);
     if (value.trim().length > 0) {
@@ -50,7 +51,7 @@ const WelcomeScreen = ({ onStartGame, onStartTutorial }) => {
 
     setIsLoading(true);
     try {
-      await onStartGame(playerName, playerCount, roundCount);
+      await onStartGame(playerName.trim(), playerCount, roundCount);
     } catch (error) {
       console.error('Failed to start game:', error);
       // You might want to show an error message to the user here
@@ -93,7 +94,12 @@ const WelcomeScreen = ({ onStartGame, onStartTutorial }) => {
               placeholder="Enter your name"
               autoComplete="off"
               autoFocus={!isMobile}
+              maxLength={MAX_NAME_LENGTH}
+              title={playerName}
             />
+            <div className={styles.inputMeta}>
+              <span className={styles.charCounter}>{playerName.length} / {MAX_NAME_LENGTH}</span>
+            </div>
             {showValidationMessage && !isNameValid && (
               <div className={styles.errorMessage}>Please enter your name</div>
             )}

@@ -1,0 +1,287 @@
+/* Card styles */
+.card {
+  width: 60px;
+  height: 90px;
+  background: white;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  font-weight: bold;
+  color: #000;
+  transition: all 0.3s ease;
+}
+
+.card.played {
+  transform: scale(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.card.lastCard {
+  z-index: 10;
+}
+
+.cardValue {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.cardSuit {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.red {
+  color: #d40000;
+}
+
+/* Player Cards */
+.fanHandUser {
+  position: relative;
+  height: 120px;
+  min-width: 50px;
+  perspective: 500px;
+}
+
+.fanCardUser {
+  width: 50px;
+  height: 75px;
+  background: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out,
+    opacity 0.2s ease-out;
+  color: #000;
+  font-weight: bold;
+}
+
+.fanCardUser.playableCard {
+  cursor: pointer;
+}
+
+.fanCardUser.playableCard:hover {
+  transform: translateY(-15px) rotate(var(--card-rotation)) !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.fanCardUser.lastCard {
+  z-index: 10;
+}
+
+.fanCardValue {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.fanCardSuit {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Card playing indicator */
+.cardPlayingIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+/* AI Cards */
+.fanHandAI {
+  position: relative;
+  height: 60px;
+  min-width: 40px;
+  margin-top: 10px;
+  perspective: 500px;
+  display: flex;
+  justify-content: center;
+}
+
+.fanCardAI {
+  width: 40px;
+  height: 60px;
+  background: linear-gradient(135deg, #2a3f5f, #1a2a43);
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  position: absolute;
+  transition: transform 0.2s ease-out;
+}
+
+.fanCardAIPattern {
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.1) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  border-radius: 5px;
+}
+
+.aiCardSingle {
+  width: 40px;
+  height: 60px;
+  background: linear-gradient(135deg, #2a3f5f, #1a2a43);
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.aiCardSinglePattern {
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.1) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  border-radius: 5px;
+}
+
+.aiCardCounter {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff4500;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.aiInlineCard {
+  width: 30px;
+  height: 45px;
+  margin-left: 5px;
+}
+
+.aiInlineCardContainer {
+  display: flex;
+  align-items: center;
+  margin-left: 5px;
+}
+
+/* Bidding Controls */
+.biddingCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 15px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  color: white;
+}
+
+.biddingTitle {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.biddingError {
+  color: #ff4d4d;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.biddingControls {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.bidButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #2a3f5f;
+  color: white;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.bidButton:hover:not(:disabled) {
+  background: #3a5070;
+}
+
+.bidButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bidInput {
+  width: 60px;
+  height: 40px;
+  margin: 0 10px;
+  text-align: center;
+  font-size: 1.5rem;
+  border: none;
+  border-radius: 5px;
+  background: #1a2a43;
+  color: white;
+}
+
+.submitButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background: #4caf50;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: #3d8b40;
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

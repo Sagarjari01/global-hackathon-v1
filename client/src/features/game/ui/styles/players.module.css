@@ -1,0 +1,329 @@
+/* Player Seats */
+.playerSeat {
+  position: absolute;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 3;
+  transition: all 0.3s ease-out;
+  border: none;
+  outline: none;
+}
+
+.playerSeat--edge {
+  margin-bottom: -60px;
+  margin-top: -60px;
+  margin-left: -60px;
+  margin-right: -60px;
+}
+
+/* Basic edge alignment for each direction */
+.playerSeat[data-pos="bottom"] {
+  left: 50%;
+  top: 100%;
+  /* transform: translateX(-50%); */
+}
+
+.playerSeat[data-pos="top"] {
+  left: 50%;
+  top: 0%;
+  /* transform: translateX(-50%); */
+}
+
+.playerSeat[data-pos="left"] {
+  left: 0%;
+  top: 50%;
+  /* transform: translateY(-50%); */
+}
+
+.playerSeat[data-pos="right"] {
+  left: 100%;
+  top: 50%;
+  /* transform: translateY(-50%); */
+}
+
+/* Corner positions with improved alignment */
+.playerSeat[data-pos="top-right"] {
+  left: 80%;
+  top: 15%;
+  /* transform: translate(-50%, -50%); */
+}
+
+.playerSeat[data-pos="top-left"] {
+  left: 20%;
+  top: 15%;
+  /* transform: translate(-50%, -50%); */
+}
+
+.playerSeat[data-pos="bottom-left"] {
+  left: 20%;
+  top: 85%;
+  /* transform: translate(-50%, -50%); */
+}
+
+.playerSeat[data-pos="bottom-right"] {
+  left: 80%;
+  top: 85%;
+  /* transform: translate(-50%, -50%); */
+}
+
+/* Redesigned oval player info box */
+.playerInfoBox {
+  background: linear-gradient(
+    145deg,
+    rgba(15, 15, 25, 0.95) 0%,
+    rgba(10, 10, 20, 0.98) 50%,
+    rgba(8, 8, 16, 0.99) 100%
+  );
+  border-radius: 35px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 6px;
+  border: 1px solid rgba(139, 69, 19, 0.3);
+}
+
+.playerIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.identityTopRow {
+  display: flex;
+  align-items: center;
+}
+
+.avatarContainer {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #cdaa7d;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.activeAvatar {
+  border-color: #4caf50;
+}
+
+.currentTurnRing {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid #4caf50;
+  animation: pulseTurn 2s infinite;
+}
+
+.scoreBadge {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background: #ff9800;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.nameScoreContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.playerName {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  text-align: center;
+}
+
+.playerScore {
+  color: #ff9800;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.playerStats {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statLabel {
+  color: #aaa;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+}
+
+.statValue {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.bidValue {
+  color: #4caf50;
+}
+
+.pendingBid {
+  color: #ff9800;
+}
+
+.trickValue {
+  color: #2196f3;
+}
+
+/* Current User specific styles */
+.currentUserInfoBox {
+  background: linear-gradient(
+    145deg,
+    rgba(20, 20, 40, 0.95) 0%,
+    rgba(15, 15, 30, 0.98) 50%,
+    rgba(10, 10, 25, 0.99) 100%
+  );
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* AI Turn Indicator */
+.aiTurnIndicator {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.2);
+  border: 2px solid #4caf50;
+  animation: pulseTurn 2s infinite;
+}
+
+/* AI Thinking Indicator */
+.aiThinkingIndicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.aiThinkingDot {
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: thinking 1.4s infinite ease-in-out both;
+}
+
+.aiThinkingDot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.aiThinkingDot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* Winner Styles */
+.winnerPlayer {
+  z-index: 10;
+}
+
+.winnerCrown {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  animation: bounce 2s infinite;
+}
+
+.winnerPlayerInfoBox {
+  background: linear-gradient(
+    145deg,
+    rgba(106, 48, 147, 0.95) 0%,
+    rgba(160, 68, 255, 0.98) 50%,
+    rgba(106, 48, 147, 0.99) 100%
+  );
+  border: 1px solid gold;
+  animation: glow 2s infinite alternate;
+}
+
+.winnerAvatar {
+  border: 2px solid gold;
+}
+
+/* Trick Winner Indicator */
+.trickWinnerIndicator {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  animation: fadeInOut 3s forwards;
+  white-space: nowrap;
+}
+
+.trickWinnerIcon {
+  font-size: 1rem;
+}
+
+/* Turn Indicator */
+.turnIndicator::before {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #4caf50;
+  animation: bounce 2s infinite;
+}

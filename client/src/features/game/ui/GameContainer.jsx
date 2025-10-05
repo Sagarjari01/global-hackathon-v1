@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Table } from './index';
 import { avatars } from './avatars';
-import { apiService } from '../../services/api.service';
 import WelcomeScreen from './WelcomeScreen';
-import ComprehensiveTutorial from '../Tutorial/ComprehensiveTutorial';
+import ComprehensiveTutorial from '../../tutorial/ui/ComprehensiveTutorial';
+import { gameApi } from '../api/gameApi';
+import { gameSocket } from '../lib/gameSocket';
+import { useGameState } from '../model/gameStore';
 
 // Move helper function outside component to prevent recreation on each render
 const getCardLabel = (card) => {
@@ -13,10 +15,10 @@ const getCardLabel = (card) => {
     (card.suit === 'HEARTS' ? '♥' : card.suit === 'DIAMONDS' ? '♦' : card.suit === 'CLUBS' ? '♣' : card.suit === 'SPADES' ? '♠' : '');
 };
 
-const RevampedGameContainer = () => {
+const GameContainer = () => {
   // Game setup and state
   const [playerName, setPlayerName] = useState('');
-  const [gameState, setGameState] = useState(null);
+  const gameState = useGameState();
   const [currentUserId, setCurrentUserId] = useState('');
   const [error, setError] = useState('');
   
@@ -57,44 +59,15 @@ const RevampedGameContainer = () => {
     }
   }, [gameState?.currentTurn, currentUserId, pendingCard]);
 
-  // Memoize the game state update function
-  const updateGameState = useCallback((newState) => {
-    console.log("🔄 Game state update received:", {
-      previousTurn: gameState?.currentTurn,
-      newTurn: newState?.currentTurn,
-      previousStatus: gameState?.status,
-      newStatus: newState?.status,
-      previousTrickCount: gameState?.turnCount,
-      newTrickCount: newState?.turnCount,
-      currentTrick: newState?.currentTrick,
-      newState: newState
-    });
-    
-    // Clear pending card if no current trick or trick is empty
-    if (!newState.currentTrick || newState.currentTrick.length === 0) {
-      if (pendingCard) {
-        console.log("🧹 Clearing pending card - new trick starting");
-        setPendingCard(null);
-      }
+  // Clear pending card on certain game state changes
+  useEffect(() => {
+    if (!gameState) return;
+    if (!gameState.currentTrick || gameState.currentTrick.length === 0) {
+      if (pendingCard) setPendingCard(null);
     }
-    
-    // Clear pending card if trick evaluation just finished
-    if (gameState?.trickEvaluationInProgress && !newState.trickEvaluationInProgress) {
-      if (pendingCard) {
-        console.log("🧹 Clearing pending card - trick evaluation finished");
-        setPendingCard(null);
-      }
+    if (gameState?.trickEvaluationInProgress === false) {
+      // nothing else to do; pendingCard will be cleared by the above when trick resets
     }
-    
-    setGameState(prev => {
-      // Only update if there are actual changes
-      if (JSON.stringify(prev) === JSON.stringify(newState)) {
-        console.log("⏭️ No changes in game state, skipping update");
-        return prev;
-      }
-      console.log("✅ Game state updated");
-      return newState;
-    });
   }, [gameState, pendingCard]);
 
   // Helper to safely set timeouts with automatic cleanup
@@ -139,15 +112,15 @@ const RevampedGameContainer = () => {
     setTrickWinnerId(null);
   }, []);
 
-  // Set up WebSocket event listeners
+  // Set up WebSocket cleanup
   useEffect(() => {
     return () => {
-      apiService.disconnect();
+      gameSocket.disconnect();
       clearAllTimeouts();
     };
   }, [clearAllTimeouts]);
 
-  // Set up game state listener
+  // React to provider state and wire up event listeners for side-effects
   useEffect(() => {
     if (!gameState) return;
 
@@ -156,46 +129,32 @@ const RevampedGameContainer = () => {
       if (player) setCurrentUserId(player.id);
     }
 
-    const unsubscribeGameState = apiService.onGameState(updateGameState);
-    const unsubscribeTrickComplete = apiService.onTrickComplete(handleTrickComplete);
-    const unsubscribeRoundComplete = apiService.onRoundComplete(handleRoundComplete);
-    const unsubscribeGameFinished = apiService.onGameFinished((data) => {
+    const unsubscribeTrickComplete = gameSocket.onTrickComplete(handleTrickComplete);
+    const unsubscribeRoundComplete = gameSocket.onRoundComplete(handleRoundComplete);
+    const unsubscribeGameFinished = gameSocket.onGameFinished((data) => {
       if (process.env.NODE_ENV === 'development') {
-        console.log("Game finished event received:", data);
-        console.log("Current gameState players:", gameState?.players);
+        console.log('Game finished event received:', data);
+        console.log('Current gameState players:', gameState?.players);
       }
-      
-      // Use the most current gameState to find the winner
-      setGameState(currentGameState => {
-        const winnerPlayer = currentGameState?.players?.find(p => p.id === data.winnerId);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Found winner player:", winnerPlayer);
-        }
-        
-        setGameEndState({
-          finished: true,
-          winner: winnerPlayer || { 
-            id: data.winnerId, 
-            name: data.winnerName || 'Unknown Player',
-            score: 0 
-          }
-        });
-        
-        return currentGameState;
+      const winnerPlayer = gameState?.players?.find(p => p.id === data.winnerId);
+      setGameEndState({
+        finished: true,
+        winner: winnerPlayer || {
+          id: data.winnerId,
+          name: data.winnerName || 'Unknown Player',
+          score: 0,
+        },
       });
     });
-    const unsubscribeError = apiService.onError(setError);
-    // console.log({unsubscribeError})
+    const unsubscribeError = gameSocket.onError(setError);
 
     return () => {
-      unsubscribeGameState();
-      unsubscribeTrickComplete();
-      unsubscribeRoundComplete();
-      unsubscribeGameFinished();
-      unsubscribeError();
+      unsubscribeTrickComplete?.();
+      unsubscribeRoundComplete?.();
+      unsubscribeGameFinished?.();
+      unsubscribeError?.();
     };
-  }, [gameState, playerName, currentUserId, updateGameState, handleTrickComplete, handleRoundComplete]);
+  }, [gameState, playerName, currentUserId, handleTrickComplete, handleRoundComplete]);
 
   // Memoize the animation state debug log - simplified
   useEffect(() => {
@@ -275,8 +234,8 @@ const RevampedGameContainer = () => {
     setPlayerName(name);
     
     try {
-      const game = await apiService.createGame(name, numberOfPlayers, numberOfRounds);
-      setGameState(game);
+      const game = await gameApi.createGame(name, numberOfPlayers, numberOfRounds);
+      gameSocket.joinGame(game.id);
     } catch (err) {
       setError('Failed to create game');
     }
@@ -327,10 +286,21 @@ const RevampedGameContainer = () => {
     
     try {
       setBidState(prev => ({ ...prev, animating: true }));
-      
-      await apiService.placeBid(gameState.id, bidState.amount);
-      
-      // The game state will be updated via WebSocket
+      // Emit and await next update or error
+      const result = await new Promise((resolve, reject) => {
+        const offState = gameSocket.onGameState((gs) => {
+          offState();
+          offErr?.();
+          resolve(gs);
+        });
+        const offErr = gameSocket.onError((e) => {
+          offState?.();
+          offErr?.();
+          reject(new Error(e));
+        });
+        gameSocket.placeBid(gameState.id, bidState.amount);
+      });
+      // The game state will be updated via Provider
       safeSetTimeout(() => {
         setBidState(prev => ({ ...prev, animating: false }));
       }, 500);
@@ -375,7 +345,19 @@ const RevampedGameContainer = () => {
 
     try {
       console.log("🚀 Playing card via API");
-      await apiService.playCard(gameState.id, card);
+      await new Promise((resolve, reject) => {
+        const offState = gameSocket.onGameState((gs) => {
+          offState();
+          offErr?.();
+          resolve(gs);
+        });
+        const offErr = gameSocket.onError((e) => {
+          offState?.();
+          offErr?.();
+          reject(new Error(e));
+        });
+        gameSocket.playCard(gameState.id, card);
+      });
       console.log("✅ Card played successfully");
       
       // Note: pendingCard will be cleared when game state updates or turn changes
@@ -441,6 +423,6 @@ const RevampedGameContainer = () => {
 };
 
 // Enable why-did-you-render tracking for this component
-RevampedGameContainer.whyDidYouRender = true;
+GameContainer.whyDidYouRender = true;
 
-export default RevampedGameContainer;
+export default GameContainer;

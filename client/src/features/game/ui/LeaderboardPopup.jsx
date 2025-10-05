@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../RevampedGame.module.css';
+import styles from './Game.module.css';
 
 const LeaderboardPopup = ({ players, onNewGame }) => {
   // Sort players by score in descending order

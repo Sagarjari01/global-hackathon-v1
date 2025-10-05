@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Table } from '../RevampedGame';
-import { avatars } from '../RevampedGame/avatars';
+import { Table } from '../../game/ui';
+import { avatars } from '../../game/ui/avatars';
 import TutorialOverlay from './TutorialOverlay';
 import styles from './Tutorial.module.css';
 
@@ -427,7 +427,7 @@ const TutorialContainer = ({ onClose }) => {
       {/* Game Table */}
       <Table
         players={mappedPlayers}
-        playedCards={playedCards}
+        playedoCards={playedCards}
         currentUserId="1"
         onCardClick={handleTutorialCardPlay}
         trickWinnerId={currentStep === 9 ? '1' : currentStep === 12 ? '1' : null}

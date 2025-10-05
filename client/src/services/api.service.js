@@ -1,6 +1,6 @@
-import config from '../config/config';
-import { ENDPOINTS, SOCKET_EVENTS } from '../constants/endpoints';
-import { io } from 'socket.io-client';
+import { ENDPOINTS, SOCKET_EVENTS } from "../constants/endpoints";
+import { http } from "../shared/api/httpClient";
+import { socketClient } from "../shared/realtime/socketClient";
 
 class SocketService {
   constructor() {
@@ -14,45 +14,42 @@ class SocketService {
 
   connect() {
     if (this.socket) return;
-    
-    this.socket = io(config.apiUrl);
-    
+    this.socket = socketClient.connect();
+
     // Set up event listeners
-    this.socket.on('connect', () => {
-      console.log('Connected to WebSocket server');
+    this.socket.on("connect", () => {
+      console.log("Connected to WebSocket server");
     });
-    
+
     this.socket.on(SOCKET_EVENTS.GAME_STATE, (gameState) => {
-      this.gameStateListeners.forEach(listener => listener(gameState));
+      this.gameStateListeners.forEach((listener) => listener(gameState));
     });
-    
+
     this.socket.on(SOCKET_EVENTS.TRICK_COMPLETE, (data) => {
-      this.trickCompleteListeners.forEach(listener => listener(data));
+      this.trickCompleteListeners.forEach((listener) => listener(data));
     });
-    
+
     this.socket.on(SOCKET_EVENTS.ROUND_COMPLETE, (data) => {
-      this.roundCompleteListeners.forEach(listener => listener(data));
+      this.roundCompleteListeners.forEach((listener) => listener(data));
     });
-    
+
     this.socket.on(SOCKET_EVENTS.GAME_FINISHED, (data) => {
-      this.gameFinishedListeners.forEach(listener => listener(data));
+      this.gameFinishedListeners.forEach((listener) => listener(data));
     });
-    
+
     this.socket.on(SOCKET_EVENTS.ERROR, (error) => {
-      console.error('Socket error:', error);
-      this.errorListeners.forEach(listener => listener(error));
+      console.error("Socket error:", error);
+      this.errorListeners.forEach((listener) => listener(error));
     });
-    
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket server');
+
+    this.socket.on("disconnect", () => {
+      console.log("Disconnected from WebSocket server");
     });
   }
 
   disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
+    socketClient.disconnect();
+    this.socket = null;
   }
 
   joinGame(gameId) {
@@ -61,7 +58,7 @@ class SocketService {
   }
 
   playCard(gameId, card) {
-    console.log("playing card event....", card)
+    console.log("playing card event....", card);
     if (!this.socket) this.connect();
     this.socket.emit(SOCKET_EVENTS.PLAY_CARD, gameId, card);
   }
@@ -98,7 +95,7 @@ class SocketService {
     this.roundCompleteListeners.add(callback);
     return () => this.roundCompleteListeners.delete(callback);
   }
-  
+
   onGameFinished(callback) {
     this.gameFinishedListeners.add(callback);
     return () => this.gameFinishedListeners.delete(callback);
@@ -116,21 +113,16 @@ const socketService = new SocketService();
 export const apiService = {
   // REST API calls
   createGame: async (playerName, playerCount = 3, roundCount = 6) => {
-    const response = await fetch(`${config.apiUrl}${ENDPOINTS.CREATE_GAME}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        playerName,
-        playerCount,
-        roundCount
-      })
+    const game = await http.post(ENDPOINTS.CREATE_GAME, {
+      playerName,
+      playerCount,
+      roundCount,
     });
-    const game = await response.json();
-    
+
     // Connect to WebSocket and join the game room
     socketService.connect();
     socketService.joinGame(game.id);
-    
+
     return game;
   },
 
@@ -162,10 +154,10 @@ export const apiService = {
       });
     });
   },
-  
+
   // No longer needed as we use WebSockets for real-time updates
   // aiPlay: async (gameId) => { ... }
-  
+
   // Add socket event listeners
   onGameState: socketService.onGameState.bind(socketService),
   onTrickComplete: socketService.onTrickComplete.bind(socketService),
@@ -176,5 +168,5 @@ export const apiService = {
   // Clean up
   disconnect: () => {
     socketService.disconnect();
-  }
+  },
 };

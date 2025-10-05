@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import styles from '../RevampedGame.module.css';
+import styles from './Game.module.css';
 import PlayerSeat from './PlayerSeat';
 import LeaderboardPopup from './LeaderboardPopup';
 import ToastNotification from './ToastNotification';
-import AudioPlayer from '../AudioPlayer';
+import AudioPlayer from './AudioPlayer';
 
 // Player positions are now calculated dynamically using the getSeatPosition function
 // which positions players evenly around the table in an elliptical arrangement.

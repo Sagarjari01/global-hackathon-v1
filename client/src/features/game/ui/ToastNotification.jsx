@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styles from '../RevampedGame.module.css';
+import styles from './Game.module.css';
 
 const ToastNotification = ({ message, onClose, autoHideDuration = 6000 }) => {
   const [visible, setVisible] = useState(true);

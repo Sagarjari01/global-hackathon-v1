@@ -1,10 +1,13 @@
-import './App.css';
-import RevampedGameContainer from './components/RevampedGame/RevampedGameContainer';
+import "./App.css";
+import GameContainer from "./features/game/ui/GameContainer";
+import GameProvider from "./app/providers/GameProvider";
 
 function App() {
   return (
     <div className="App">
-      <RevampedGameContainer />
+      <GameProvider>
+        <GameContainer />
+      </GameProvider>
     </div>
   );
 }
